@@ -69,13 +69,8 @@ void mesh_node_reset(void);
 void    mesh_attention_timer_set(uint8_t timer_s);
 uint8_t mesh_attention_timer_get(void);
 
-// temp
-void mesh_access_key_refresh_revoke_keys(mesh_subnet_t * subnet);
-void mesh_access_netkey_finalize(mesh_network_key_t * network_key);
-void mesh_access_appkey_finalize(mesh_transport_key_t * transport_key);
-
-// lizhk
-bool ble_mesh_is_provisioned(void);
+// provision state
+bool mesh_is_provisioned(void);
 
 #if defined __cplusplus
 }

@@ -41,7 +41,7 @@ typedef struct {
  * @format 1
  * @param subevent_code
  */
-#define MESH_SUBEVENT_CAN_SEND_NOW                                          0x01u
+#define MESH_SUBEVENT_CAN_SEND_NOW                                                   0x01u
 
 /**
  * @format 11

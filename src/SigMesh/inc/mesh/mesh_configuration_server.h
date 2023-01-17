@@ -46,15 +46,8 @@ typedef struct {
 } mesh_configuration_server_model_context_t;
 
 // API
-
 const mesh_operation_t * mesh_configuration_server_get_operations(void);
 
-void mesh_configuration_server_feature_changed(void);
-
-void mesh_configuration_server_process_heartbeat(mesh_model_t * configuration_server_model, uint16_t src, uint16_t dest, uint8_t hops, uint16_t features);
-
-// PTS Testing
-void config_nekey_list_set_max(uint16_t max);
 
 #ifdef __cplusplus
 } /* end of extern "C" */

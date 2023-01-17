@@ -18,18 +18,6 @@ extern "C"
 #endif
 
 /**
- * @brief Init Provisioning in Device Role with device UUID
- */
-void provisioning_device_init(void);
-
-
-/**
- * @brief Register packet handler
- * @param packet_handler
- */
-void provisioning_device_register_packet_handler(btstack_packet_handler_t packet_handler);
-
-/**
  * @brief Public Key OOB Available
  * @param public_key  (64 bytes), need to stay valid forever
  * @param private_key (32 bytes), need to stay valid forever 

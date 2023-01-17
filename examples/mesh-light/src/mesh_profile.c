@@ -376,7 +376,7 @@ static void user_packet_handler(uint8_t packet_type, uint16_t channel, const uin
                     my_conn_handle = create_conn->handle;
                     my_conn_interval_ms = CPI_VAL_TO_MS(create_conn->interval);
                     app_log_debug("connect.\n");
-                    att_set_db(my_conn_handle, ( ble_mesh_is_provisioned()?  gatt_data_proxy : gatt_data_pb ));
+                    att_set_db(my_conn_handle, ( mesh_is_provisioned()?  gatt_data_proxy : gatt_data_pb ));
                     mesh_connected(my_conn_handle);
                     platform_calibrate_32k();
                 }

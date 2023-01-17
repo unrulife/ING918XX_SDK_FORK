@@ -57,13 +57,6 @@ typedef struct {
  */
 void btstack_tlv_set_instance(const btstack_tlv_t * tlv_impl, void * tlv_context);
 
-/**
- * @brief Get current TLV implementation. Used for bonding information, but can be used by application, too.
- * @param tlv_impl
- * @param tlv_context
- */
-void btstack_tlv_get_instance(const btstack_tlv_t ** tlv_impl, void ** tlv_context);
-
 /* API_END */
 
 #if defined __cplusplus

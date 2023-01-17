@@ -237,60 +237,6 @@ typedef struct {
     mesh_linked_list_iterator_t it;
 } mesh_subnet_iterator_t;
 
-/**
- * @brief Init Mesh Network Layer
- */
-void mesh_network_init(void);
-
-/** 
- * @brief Set higher layer Network PDU handler
- * @param packet_handler
- */
-void mesh_network_set_higher_layer_handler(void (*packet_handler)(mesh_network_callback_type_t callback_type, mesh_network_pdu_t * network_pdu));
-
-/** 
- * @brief Set higher layer Proxy PDU handler
- * @param packet_handler
- */
-void mesh_network_set_proxy_message_handler(void (*packet_handler)(mesh_network_callback_type_t callback_type, mesh_network_pdu_t * network_pdu));
-
-/**
- * @brief Mark packet as processed
- * @param newtork_pdu received via call packet_handler
- */
-void mesh_network_message_processed_by_higher_layer(mesh_network_pdu_t * network_pdu);
-
-/**
- * @brief Send network_pdu after encryption
- * @param network_pdu
- */
-void mesh_network_send_pdu(mesh_network_pdu_t * network_pdu);
-
-/*
- * @brief Setup network pdu header
- * @param netkey_index
- * @param nid
- * @param ctl
- * @param ttl
- * @param seq
- * @param dst
- * @param transport_pdu_data
- * @param transport_pdu_len
- */
-void mesh_network_setup_pdu(mesh_network_pdu_t * network_pdu, uint16_t netkey_index, uint8_t nid, uint8_t ctl, uint8_t ttl, uint32_t seq, uint16_t src, uint16_t dst, const uint8_t * transport_pdu_data, uint8_t transport_pdu_len);
-
-/**
- * Setup network pdu header without modifying len or payload
- * @param network_pdu
- * @param netkey_index
- * @param nid
- * @param ctl
- * @param ttl
- * @param seq
- * @param src
- * @param dest
- */
-void mesh_network_setup_pdu_header(mesh_network_pdu_t * network_pdu, uint16_t netkey_index, uint8_t nid, uint8_t ctl, uint8_t ttl, uint32_t seq, uint16_t src, uint16_t dest);
 
 /**
  * @brief Validate network addresses
@@ -343,26 +289,12 @@ int mesh_network_address_all_friends(uint16_t addr);
  */
 int mesh_network_address_all_relays(uint16_t addr);
 
-
 /**
  * @brief Check if Virtual address
  * @param addr
  * @return 1 if virtual
  */
 int mesh_network_address_virtual(uint16_t addr);
-
-
-/**
- * @brief Add subnet to list
- * @param subnet
- */
-void mesh_subnet_add(mesh_subnet_t * subnet);
-
-/**
- * @brief Remove subnet from list
- * @param subnet
- */
-void mesh_subnet_remove(mesh_subnet_t * subnet);
 
 /**
  * @brief Get subnet for netkey_index
@@ -378,66 +310,10 @@ mesh_subnet_t * mesh_subnet_get_by_netkey_index(uint16_t netkey_index);
 int mesh_subnet_list_count(void);
 
 /**
- * @brief Iterate over all subnets
- * @param it
- */
-void mesh_subnet_iterator_init(mesh_subnet_iterator_t *it);
-
-/**
- * @brief Check if another subnet is available
- * @param it
- * @return
- */
-int mesh_subnet_iterator_has_more(mesh_subnet_iterator_t *it);
-
-/**
- * @brief Get next subnet
- * @param it
- * @return
- */
-mesh_subnet_t * mesh_subnet_iterator_get_next(mesh_subnet_iterator_t *it);
-
-/**
- * @brief Setup subnet for given netkey index
- */
-void mesh_subnet_setup_for_netkey_index(uint16_t netkey_index);
-
-/**
- * @brief remove all subnet. added by lizhk.
+ * @brief remove all subnet.
  */
 void mesh_subnet_delete_all_subnet(void); 
 
-/**
- * @brief Get outgoing network key for subnet based on key refresh phase
- */
-mesh_network_key_t * mesh_subnet_get_outgoing_network_key(mesh_subnet_t * subnet);
-
-// buffer pool
-mesh_network_pdu_t * mesh_network_pdu_get(void);
-void mesh_network_pdu_free(mesh_network_pdu_t * network_pdu);
-void mesh_network_notify_on_freed_pdu(void (*callback)(void));
-
-// Mesh Network PDU Getter
-uint16_t  mesh_network_control(mesh_network_pdu_t * network_pdu);
-uint8_t   mesh_network_nid(mesh_network_pdu_t * network_pdu);
-uint8_t   mesh_network_ttl(mesh_network_pdu_t * network_pdu);
-uint32_t  mesh_network_seq(mesh_network_pdu_t * network_pdu);
-uint16_t  mesh_network_src(mesh_network_pdu_t * network_pdu);
-uint16_t  mesh_network_dst(mesh_network_pdu_t * network_pdu);
-int       mesh_network_segmented(mesh_network_pdu_t * network_pdu);
-uint8_t   mesh_network_control_opcode(mesh_network_pdu_t * network_pdu);
-uint8_t * mesh_network_pdu_data(mesh_network_pdu_t * network_pdu);
-uint8_t   mesh_network_pdu_len(mesh_network_pdu_t * network_pdu);
-
-// Mesh Network PDU Setter
-void mesh_network_pdu_set_seq(mesh_network_pdu_t * network_pdu, uint32_t seq);
-
-// Testing only
-void mesh_network_received_message(const uint8_t * pdu_data, uint8_t pdu_len, uint8_t flags);
-void mesh_network_process_proxy_configuration_message(const uint8_t * pdu_data, uint8_t pdu_len);
-void mesh_network_encrypt_proxy_configuration_message(mesh_network_pdu_t * network_pdu);
-void mesh_network_dump(void);
-void mesh_network_reset(void);
 
 #if defined __cplusplus
 }

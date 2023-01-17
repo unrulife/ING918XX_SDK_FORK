@@ -10,7 +10,6 @@
 #include "mesh_port_stack.h"
 #include "adv_bearer.h"
 #include "mesh.h"
-#include "mesh_proxy.h"
 #include "mesh_port_pb.h"
 #include "mesh_profile.h"
 #include "app_config.h"

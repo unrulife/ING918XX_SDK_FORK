@@ -148,21 +148,11 @@ typedef struct {
     mesh_linked_list_iterator_t it;
 } mesh_element_iterator_t;
 
-//void mesh_node_init(void);
+/**
+ * @brief Primary element initialization.
+ * @param elem
+ */
 void mesh_primary_elem_init(mesh_element_t * elem);
-
-/**
- * @brief Set unicast address of primary element
- * @param unicast_address
- */
-void mesh_node_primary_element_address_set(uint16_t unicast_address);
-
-/**
- * @brief Set location of primary element
- * @note Returned by Configuration Server Composite Data
- * @param location
- */
-void mesh_node_set_primary_element_location(uint16_t location);
 
 /**
  * @brief Set location of element
@@ -224,20 +214,7 @@ uint16_t mesh_access_get_element_address(mesh_model_t * mesh_model);
  */
 void mesh_element_add_model(mesh_element_t * element, mesh_model_t * mesh_model);
 
-// Mesh Element Iterator
-void mesh_element_iterator_init(mesh_element_iterator_t * iterator);
 
-int mesh_element_iterator_has_next(mesh_element_iterator_t * iterator);
-
-mesh_element_t * mesh_element_iterator_next(mesh_element_iterator_t * iterator);
-
-// Mesh Model Iterator
-
-void mesh_model_iterator_init(mesh_model_iterator_t * iterator, mesh_element_t * element);
-
-int mesh_model_iterator_has_next(mesh_model_iterator_t * iterator);
-
-mesh_model_t * mesh_model_iterator_next(mesh_model_iterator_t * iterator);
 
 // Mesh Model Utility
 
@@ -302,11 +279,6 @@ uint16_t mesh_node_get_product_id(void);
  */
 uint16_t mesh_node_get_product_version_id(void);
 
-
-// Heartbeat (helper)
-uint16_t mesh_heartbeat_pwr2(uint8_t value);
-uint8_t mesh_heartbeat_count_log(uint16_t value);
-uint8_t mesh_heartbeat_period_log(uint16_t value);
 
 #if defined __cplusplus
 }

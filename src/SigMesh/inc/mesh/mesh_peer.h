@@ -27,9 +27,6 @@ typedef struct {
 // get peer info for address
 mesh_peer_t * mesh_peer_for_addr(uint16_t address);
 
-// reset seq auth == replay protection
-void mesh_seq_auth_reset(void);
-
 #if defined __cplusplus
 }
 #endif
