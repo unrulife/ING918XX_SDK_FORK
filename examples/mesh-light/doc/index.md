@@ -8,7 +8,7 @@ This example creates a SIG Mesh light.
 
 Jumpers marked in below figure should be connected:
 
-<img src="./img/hardware.png" width="50%" />
+<img src="../../llsync_light/doc/img/hardware.png" width="50%" />
 
 ## Test
 
