@@ -1,4 +1,3 @@
-
 /**
  *
  * BTstack definitions, events, and error codes 
