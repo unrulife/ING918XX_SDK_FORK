@@ -361,10 +361,6 @@ static void user_packet_handler(uint8_t packet_type, uint16_t channel, const uin
             break;
         app_log_debug("bt init ok.\n");
         mesh_stack_ready();
-#ifdef ENABLE_RF_TX_RX_TEST
-        #include "RF_TEST.H"
-        IngRfTest_btstack_ready();
-#endif
         break;
 
     case HCI_EVENT_LE_META:
