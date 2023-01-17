@@ -48,7 +48,7 @@ typedef struct {
 	 * @param context
 	 * @param bank
 	 * @param offset into flash bank
-	  to read data
+	 * @param data to read data
 	 * @param size of data to store
 	 */
 	void (*write)(void * context, int bank, uint32_t offset, const uint8_t * data, uint32_t size);

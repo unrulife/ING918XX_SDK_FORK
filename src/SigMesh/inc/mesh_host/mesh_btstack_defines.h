@@ -427,7 +427,7 @@ typedef struct {
  * @param netkey_index_item
  * @param appkey_index_item
  */
- #define MESH_SUBEVENT_CONFIGURATION_APPKEY_INDEX_LIST_ITEM                            0x47u
+#define MESH_SUBEVENT_CONFIGURATION_APPKEY_INDEX_LIST_ITEM                            0x47u
 
 /**
  * @format 12121

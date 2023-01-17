@@ -33,7 +33,7 @@ typedef enum {
     MODEL_STATE_UPDATE_REASON_TRANSITION_ABORT, 
     // MODEL_STATE_UPDATE_REASON_BOUND_STATE, 
     MODEL_STATE_UPDATE_REASON_APPLICATION_CHANGE
- } model_state_update_reason_t;
+} model_state_update_reason_t;
 
 typedef enum {
     TRANSITION_START,

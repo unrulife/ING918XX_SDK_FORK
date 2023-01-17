@@ -104,7 +104,7 @@ static void mesh_provisioning_message_handler(uint8_t packet_type, uint16_t chan
             }
             break;
         default:
-           break;
+            break;
     }
 }
 
