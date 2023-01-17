@@ -178,8 +178,8 @@ static void key_proc_in_host_task(uint8_t num){
     switch(num){
         case 1: // key1 : change connection interval.
             {
-                app_log_debug("key1 : change connection interval. \n");
-                app_update_conn_params_req();
+//                app_log_debug("key1 : change connection interval. \n");
+//                app_update_conn_params_req();
             }
             break;
         case 2: // key2 : clear all mesh info in flash.
@@ -190,14 +190,14 @@ static void key_proc_in_host_task(uint8_t num){
             break;
         case 3: // key3 : change scan params.
             {
-                app_log_debug("key3 : change scan params. \n");
-                mesh_scan_param_update();
+//                app_log_debug("key3 : change scan params. \n");
+//                mesh_scan_param_update();
             }
             break;
         case 4: // key4 : send non-conn data.
             {
-                app_log_debug("key4 : send non-conn data. \n");
-                mesh_send_non_conn_data();
+//                app_log_debug("key4 : send non-conn data. \n");
+//                mesh_send_non_conn_data();
             }
             break;
     }
