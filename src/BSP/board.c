@@ -118,11 +118,18 @@ void set_rgb_led_color(uint8_t r, uint8_t g, uint8_t b)
     ws2881_write(cmd);
 }
 
+#elif (BOARD_ID == BOARD_ING9187_02_03_03)
+
+void set_rgb_led_color(uint8_t r, uint8_t g, uint8_t b)
+{
+    GIO_WriteValue(PIN_RGB_LED, (r>0)? 1:0);
+}
+
 #endif
 
 void setup_rgb_led()
 {
-#if(BOARD_ID == BOARD_ING91881B_02_02_05)
+#if ( (BOARD_ID == BOARD_ING91881B_02_02_05) || (BOARD_ID == BOARD_ING9187_02_03_03) )
     SYSCTRL_ClearClkGateMulti((1 << SYSCTRL_ClkGate_APB_GPIO0));
     PINCTRL_SetPadMux(PIN_RGB_LED, IO_SOURCE_GPIO);
 
