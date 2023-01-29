@@ -23,7 +23,7 @@
 // Button gpio select.
 #define KB_KEY_1            GIO_GPIO_1 //key 1
 #define KB_KEY_2            GIO_GPIO_5 //key 2
-#define KB_KEY_3            GIO_GPIO_7 //key 3
+#define KB_KEY_3            GIO_GPIO_18 //key 3
 #define KB_KEY_4            GIO_GPIO_4 //key 4
 
 
@@ -80,7 +80,10 @@ static void key_proc_in_host_task(uint8_t num){
             break;
         case 3: // key3 : 
             {
-                app_log_debug("key%d : reserved. \n", num);
+#ifdef APP_MESH_FLASH_PARAM_CLEAR_TEST_EN
+                app_log_debug("key%d : clear all mesh info in flash. \n", num);
+                mesh_ble_params_reset_delay_timer_start(100);
+#endif
             }
             break;
         case 4: // key4 : 
@@ -171,6 +174,7 @@ static void setup_key_gpio(void){
     PINCTRL_SetPadMux(KB_KEY_2, IO_SOURCE_GPIO);
     PINCTRL_SetPadMux(KB_KEY_3, IO_SOURCE_GPIO);
     PINCTRL_SetPadMux(KB_KEY_4, IO_SOURCE_GPIO);
+    PINCTRL_Pull(KB_KEY_3, PINCTRL_PULL_UP);
     GIO_SetDirection(KB_KEY_1, GIO_DIR_INPUT);
     GIO_SetDirection(KB_KEY_2, GIO_DIR_INPUT);
     GIO_SetDirection(KB_KEY_3, GIO_DIR_INPUT);
