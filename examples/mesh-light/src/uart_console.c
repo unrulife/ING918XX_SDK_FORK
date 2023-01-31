@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "platform_api.h"
+#include "mesh_storage_low_level.h"
 
 typedef void (*f_cmd_handler)(const char *param);
 
@@ -45,6 +46,7 @@ static void cmd_name(const char *param)
     buffer[0] = '\0';
     if (sscanf(param, "%s", buffer) != 1) return;
     platform_printf("name[%d]:%s\n", strlen(buffer), buffer);
+    mesh_storage_name_set((uint8_t *)buffer, strlen(buffer), 1);
 }
 
 static cmd_t cmds[] =
