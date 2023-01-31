@@ -100,6 +100,7 @@ void setup_peripherals(void)
     config_uart(OSC_CLK_FREQ, PRINT_UART_BAUD);
     
     setup_rgb_led();
+    setup_indicate_led();
 
 #ifdef ENABLE_BUTTON_TEST
     button_test_init();

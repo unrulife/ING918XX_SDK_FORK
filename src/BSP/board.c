@@ -27,9 +27,18 @@
 #ifndef PIN_RGB_LED
 #if ((BOARD_ID == BOARD_ING91881B_02_02_04) || (BOARD_ID == BOARD_ING91881B_02_02_05) || (BOARD_ID == BOARD_ING91881B_02_02_06))
 #define PIN_RGB_LED   GIO_GPIO_0
+
 #elif (BOARD_ID == BOARD_DB682AC1A)
 #define PIN_RGB_LED   GIO_GPIO_6
 #endif
+#endif
+
+#ifndef PIN_TEST_LEDA // the right side one.
+#define PIN_TEST_LEDA   GIO_GPIO_11
+#endif
+
+#ifndef PIN_TEST_LEDB // the middle one
+#define PIN_TEST_LEDB   GIO_GPIO_10 
 #endif
 
 //-------------------------------------------------RGB_LED drive sort-------------------------------------------------
@@ -149,6 +158,51 @@ void setup_rgb_led()
     #error unknown or unsupported board type
 #endif
    set_rgb_led_color(50, 50, 50);
+}
+
+void toggle_indicate_led_a(void)
+{
+    if(GIO_ReadValue(PIN_TEST_LEDA)){
+        printf("led a is on.");
+        GIO_WriteValue(PIN_TEST_LEDA, 0);
+    } else {
+        printf("led a is off.");
+        GIO_WriteValue(PIN_TEST_LEDA, 1);
+    }
+}
+
+void toggle_indicate_led_b(void)
+{
+    if(GIO_ReadValue(PIN_TEST_LEDB)){
+        printf("led b is on.");
+        GIO_WriteValue(PIN_TEST_LEDB, 0);
+    } else {
+        printf("led b is off.");
+        GIO_WriteValue(PIN_TEST_LEDB, 1);
+    }
+}
+
+void set_indicate_led_a(uint8_t en)
+{
+    GIO_WriteValue(PIN_TEST_LEDA, en? 1:0);
+}
+
+void set_indicate_led_b(uint8_t en)
+{
+    GIO_WriteValue(PIN_TEST_LEDB, en? 1:0);
+}
+
+void setup_indicate_led(void)
+{
+#if (BOARD_ID == BOARD_ING9187_02_03_03)
+    SYSCTRL_ClearClkGateMulti((1 << SYSCTRL_ClkGate_APB_GPIO0));
+    PINCTRL_SetPadMux(PIN_TEST_LEDA, IO_SOURCE_GPIO);
+    PINCTRL_SetPadMux(PIN_TEST_LEDB, IO_SOURCE_GPIO);
+    GIO_SetDirection(PIN_TEST_LEDA, GIO_DIR_BOTH); //use GIO_ReadValue must set both dir.
+    GIO_SetDirection(PIN_TEST_LEDB, GIO_DIR_BOTH);
+    GIO_WriteValue(PIN_TEST_LEDA, 0);
+    GIO_WriteValue(PIN_TEST_LEDB, 0);
+#endif
 }
 
 #else

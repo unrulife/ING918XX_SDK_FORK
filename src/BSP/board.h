@@ -7,6 +7,7 @@
 #define BOARD_ING91881B_02_02_05        2
 #define BOARD_ING91881B_02_02_06        3
 #define BOARD_DB682AC1A                 4
+#define BOARD_ING9187_02_03_03          5
 
 #ifndef BOARD_ID
 #if   (INGCHIPS_FAMILY == INGCHIPS_FAMILY_918)
@@ -19,6 +20,12 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+void toggle_indicate_led_a(void);
+void toggle_indicate_led_b(void);
+void set_indicate_led_a(uint8_t en); //en=1, led on.
+void set_indicate_led_b(uint8_t en);
+void setup_indicate_led(void);
 
 /**
  ****************************************************************************************
