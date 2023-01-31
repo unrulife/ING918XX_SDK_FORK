@@ -7,6 +7,7 @@
 #include "mesh_profile.h"
 #include "app_config.h"
 #include "port_gen_os_driver.h"
+#include "uart_console.h"
 
 #ifdef ENABLE_BUTTON_TEST
 #include "BUTTON_TEST.h"
@@ -89,7 +90,7 @@ void config_uart(uint32_t freq, uint32_t baud)
     UART_0.ClockFrequency    = freq;
     UART_0.BaudRate          = baud;
 
-    apUART_Initialize(PRINT_UART, &UART_0, 0);
+    apUART_Initialize(PRINT_UART, &UART_0, 1 << bsUART_RECEIVE_INTENAB);
 }
 
 #include "../../peripheral_led/src/impl_led.c"
@@ -105,6 +106,31 @@ void setup_peripherals(void)
 #ifdef ENABLE_BUTTON_TEST
     button_test_init();
 #endif
+}
+
+static uint32_t uart_isr(void *user_data)
+{
+    uint32_t status;
+
+    while(1)
+    {
+        status = apUART_Get_all_raw_int_stat(PRINT_UART);
+        if (status == 0)
+            break;
+
+        PRINT_UART->IntClear = status;
+
+        // rx int
+        if (status & (1 << bsUART_RECEIVE_INTENAB))
+        {
+            while (apUART_Check_RXFIFO_EMPTY(PRINT_UART) != 1)
+            {
+                char c = PRINT_UART->DataRead;
+                console_rx_data(&c, 1);
+            }
+        }
+    }
+    return 0;
 }
 
 trace_rtt_t trace_ctx = {0};
@@ -126,6 +152,9 @@ int app_main()
     trace_rtt_init(&trace_ctx);
     platform_set_evt_callback(PLATFORM_CB_EVT_TRACE, (f_platform_evt_cb)cb_trace_rtt, &trace_ctx);
     platform_config(PLATFORM_CFG_TRACE_MASK, 0xfff);
+    
+    platform_set_irq_callback(PLATFORM_CB_IRQ_UART0, uart_isr, NULL);
+    cmd_help(NULL);
 
     return (int)os_impl_get_driver();
 }
