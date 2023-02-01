@@ -25,6 +25,7 @@ static char buffer[30] = {0};
 
 static const char help[] =  "commands:\n"
                             "  h/?          show this help\n"
+                            "  reset        system reset\n"
                             "  name xxx..   set name to xxx..\n";
 
 void cmd_help(const char *param)
@@ -40,6 +41,11 @@ void cmd_help(const char *param)
  * if (sscanf(param, "%d %d", data1, data2) != 2) return;
  * if (sscanf(param, "%d %d %d", data1, data2, data3) != 3) return;
  */
+
+static void cmd_reset(const char *param)
+{
+    platform_reset();
+}
 
 static void cmd_name(const char *param)
 {
@@ -58,6 +64,10 @@ static cmd_t cmds[] =
     {
         .cmd = "?",
         .handler = cmd_help
+    },
+    {
+        .cmd = "reset",
+        .handler = cmd_reset
     },
     {
         .cmd = "name",
