@@ -17,6 +17,10 @@
 #include "mesh_manage_conn_and_scan.h"
 #include "app_debug.h"
 
+#define BLUETOOTH_DATA_TYPE_PB_ADV                                             0x29 // PB-ADV
+#define BLUETOOTH_DATA_TYPE_MESH_MESSAGE                                       0x2A // Mesh Message
+#define BLUETOOTH_DATA_TYPE_MESH_BEACON                                        0x2B // Mesh Beacon
+
 #define CON_HANDLE_INVALID 0xFFFF
 
 // mesh adv handle
@@ -374,6 +378,32 @@ static void user_packet_handler(uint8_t packet_type, uint16_t channel, const uin
     case HCI_EVENT_LE_META:
         switch (hci_event_le_meta_get_subevent_code(packet))
         {
+            case HCI_SUBEVENT_LE_EXTENDED_ADVERTISING_REPORT:{
+                    const le_ext_adv_report_t *report = decode_hci_le_meta_event(packet, le_meta_event_ext_adv_report_t)->reports;
+                    
+                    // only non-connectable ind
+                    if (report->evt_type != 0x10) break;
+
+                    switch(report->data[1]){
+                        case BLUETOOTH_DATA_TYPE_MESH_MESSAGE:
+                            printf("Message adv[%d]:", report->data_len);
+                            printf_hexdump(report->data, report->data_len);
+                            break;
+                        case BLUETOOTH_DATA_TYPE_MESH_BEACON:
+                            printf("Beacon adv[%d]:", report->data_len);
+                            printf_hexdump(report->data, report->data_len);
+                            break;
+                        case BLUETOOTH_DATA_TYPE_PB_ADV:
+                            printf("pb adv[%d]:", report->data_len);
+                            printf_hexdump(report->data, report->data_len);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                break;
+
+            
             case HCI_SUBEVENT_LE_ENHANCED_CONNECTION_COMPLETE:{
                     const le_meta_event_enh_create_conn_complete_t *create_conn =
                                         decode_hci_le_meta_event(packet, le_meta_event_enh_create_conn_complete_t);
