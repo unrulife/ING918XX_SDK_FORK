@@ -255,8 +255,16 @@ void mesh_gatt_adv_addr_set(bd_addr_t addr){
     memcpy(m_gatt_adv_addr, addr, sizeof(bd_addr_t));
 }
 
+void mesh_gatt_adv_addr_get(bd_addr_t addr){
+    memcpy(addr, m_gatt_adv_addr, sizeof(bd_addr_t));
+}
+
 void mesh_beacon_adv_addr_set(bd_addr_t addr){
     memcpy(m_beacon_adv_addr, addr, sizeof(bd_addr_t));
+}
+
+void mesh_beacon_adv_addr_get(bd_addr_t addr){
+    memcpy(addr, m_beacon_adv_addr, sizeof(bd_addr_t));
 }
 
 static void mesh_proxy_adv_setup(void){

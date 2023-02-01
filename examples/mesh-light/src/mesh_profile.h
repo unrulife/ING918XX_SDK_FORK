@@ -38,7 +38,9 @@ void ble_set_conn_interval_ms(uint16_t interval_ms);
 
 // system
 void mesh_gatt_adv_addr_set(bd_addr_t addr);
+void mesh_gatt_adv_addr_get(bd_addr_t addr);
 void mesh_beacon_adv_addr_set(bd_addr_t addr);
+void mesh_beacon_adv_addr_get(bd_addr_t addr);
 void mesh_setup_adv(void);
 void mesh_server_restart(void);
 
