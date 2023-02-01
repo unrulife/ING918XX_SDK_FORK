@@ -12,6 +12,9 @@
 /* BUTTON TEST */
 #define ENABLE_BUTTON_TEST
 
+/* RF test */
+#define ENABLE_RF_TX_RX_TEST
+
 /* Mesh App Config */
 #define ENABLE_MESH_ADV_BEARER
 #define ENABLE_MESH_GATT_BEARER

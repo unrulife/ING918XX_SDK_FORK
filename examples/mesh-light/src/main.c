@@ -16,9 +16,17 @@
 //-----------------------------------------------------
 // uart config
 #define PRINT_UART          APB_UART0
+
+#ifdef ENABLE_RF_TX_RX_TEST
+#include "RF_TEST.H"
+#define PRINT_UART_BAUD     115200
+#define USER_UART0_IO_TX    GIO_GPIO_17 //uart0 tx
+#define USER_UART0_IO_RX    GIO_GPIO_9  //uart0 rx
+#else
 #define PRINT_UART_BAUD     115200
 #define USER_UART0_IO_TX    GIO_GPIO_2 //uart0 tx
 #define USER_UART0_IO_RX    GIO_GPIO_3 //uart0 rx
+#endif
 //-----------------------------------------------------
 
 
@@ -105,6 +113,10 @@ void setup_peripherals(void)
 
 #ifdef ENABLE_BUTTON_TEST
     button_test_init();
+#endif
+    
+#ifdef ENABLE_RF_TX_RX_TEST
+    IngRfTest_init();
 #endif
 }
 
