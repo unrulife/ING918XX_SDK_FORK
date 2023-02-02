@@ -164,6 +164,12 @@ void mesh_mcas_conn_params_update_complete_callback(uint8_t status, uint16_t han
     app_log_debug("-- %s .\n", __func__);
 
     if(!status){
+        /* Increase slave's scanning time ratio when it is connected to the master 
+           by reducing the value of slave's local connection extension (max_ce_len), 
+           which improves the ability of the slave node to scan broadcast packets.
+        */
+        ll_hint_on_ce_len(handle, 0, 8);//max_ce_len = 5ms
+        
         //update success.
         if(MeshConnScan.run_state == MESH_RUNNING_STATE_UPDATE_CONN_PARAM_REQ_48){
             app_log_debug("update 48ms ok (max_ce_len also updated.).\n");
