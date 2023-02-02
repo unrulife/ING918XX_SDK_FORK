@@ -344,6 +344,8 @@ static void user_msg_handler(btstack_user_msg_t * usrmsg)
     #include "BUTTON_TEST.h"
     button_msg_handler(usrmsg);
 #endif
+    extern void uart_cmd_msg_handler(btstack_user_msg_t * usrmsg);
+    uart_cmd_msg_handler(usrmsg);
 }
 
 // read

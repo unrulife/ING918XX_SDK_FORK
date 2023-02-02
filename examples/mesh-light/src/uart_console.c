@@ -7,6 +7,7 @@
 
 #include "platform_api.h"
 #include "mesh_storage_low_level.h"
+#include "mesh_profile.h"
 
 typedef void (*f_cmd_handler)(const char *param);
 
@@ -24,9 +25,12 @@ void print_addr(const uint8_t *addr)
 static char buffer[30] = {0};
 
 static const char help[] =  "commands:\n"
-                            "  h/?          show this help\n"
-                            "  reset        system reset\n"
-                            "  name xxx..   set name to xxx..\n";
+                            "  h/?                   show this help\n"
+                            "  reset                 system reset\n"
+                            "  interval ddd          update connection interval to ddd\n"
+                            "  scan_start ddd        start scan, interval=ddd, window=ddd\n"
+                            "  scan_stop             stop scan\n"
+                            "  name sss              set name to sss\n";
 
 void cmd_help(const char *param)
 {
@@ -37,9 +41,9 @@ void cmd_help(const char *param)
  * if (sscanf(param, "%s", str) != 1) return;
  * if (sscanf(param, "%s %s", str1, str2) != 2) return;
  * if (sscanf(param, "%s %s %s", str1, str2, str3) != 3) return;
- * if (sscanf(param, "%d", data) != 1) return;
- * if (sscanf(param, "%d %d", data1, data2) != 2) return;
- * if (sscanf(param, "%d %d %d", data1, data2, data3) != 3) return;
+ * if (sscanf(param, "%d", &data) != 1) return;
+ * if (sscanf(param, "%d %d", &data1, &data2) != 2) return;
+ * if (sscanf(param, "%d %d %d", &data1, &data2, &data3) != 3) return;
  */
 
 static void cmd_reset(const char *param)
@@ -53,6 +57,75 @@ static void cmd_name(const char *param)
     if (sscanf(param, "%s", buffer) != 1) return;
     platform_printf("name[%d]:%s\n", strlen(buffer), buffer);
     mesh_storage_name_set((uint8_t *)buffer, strlen(buffer), 1);
+}
+
+#define USER_MSG_ID_SCAN_START          (0x50) // 
+#define USER_MSG_ID_SCAN_STOP           (0x51) // 
+#define USER_MSG_ID_UPDATE_CONN_PARAM   (0x52) // 
+
+// conn update.
+#define CPI_VAL_TO_MS(x)    ((uint16_t)(x * 5 / 4))
+#define CPI_MS_TO_VAL(x)    ((uint16_t)(x * 4 / 5))
+#define CPSTT_VAL_TO_MS(x)  ((uint16_t)(x * 10))
+#define CPSTT_MS_TO_VAL(x)  ((uint16_t)(x / 10))
+
+// uart msg handler.
+void uart_cmd_msg_handler(btstack_user_msg_t * usrmsg){
+    uint32_t cmd_id = usrmsg->msg_id;
+
+    switch(cmd_id){
+        case USER_MSG_ID_SCAN_START:
+            {
+                uint16_t scan_interval_window = usrmsg->len;
+                mesh_scan_stop();
+                mesh_scan_param_set(scan_interval_window, scan_interval_window);
+                mesh_scan_start();
+                platform_printf("scan start!\n");
+            }
+            break;
+        case USER_MSG_ID_SCAN_STOP:
+            {
+                mesh_scan_stop();
+                platform_printf("scan stop!\n");
+            }
+            break;
+        case USER_MSG_ID_UPDATE_CONN_PARAM:
+            {
+                uint16_t interval_ms = usrmsg->len;
+                gap_update_connection_parameters(   ble_get_curr_conn_handle(), \
+                           CPI_MS_TO_VAL(interval_ms), CPI_MS_TO_VAL(interval_ms), \
+                           0, CPSTT_MS_TO_VAL(5000), NULL, NULL);//slave can not change ce_len, use [ll_hint_on_ce_len] to set slave local ce_len
+
+                platform_printf("update connect interval request!\n");
+            }
+            break;
+    }
+}
+
+
+static void cmd_interval(const char *param)
+{
+    int interval_ms;
+    if (sscanf(param, "%d", &interval_ms) != 1) return;
+    platform_printf("interval: %dms\n", interval_ms);
+    if(0xFFFF == ble_get_curr_conn_handle()){
+        platform_printf("not connect.\n");
+        return; // not connect.
+    } 
+    btstack_push_user_msg(USER_MSG_ID_UPDATE_CONN_PARAM, NULL, (uint16_t)interval_ms);
+}
+
+static void cmd_scan_start(const char *param)
+{
+    int scan_interval_window;
+    if (sscanf(param, "%d", &scan_interval_window) != 1) return;
+    platform_printf("scan_interval: %dms, scan_window: %dms\n", scan_interval_window, scan_interval_window);    
+    btstack_push_user_msg(USER_MSG_ID_SCAN_START, NULL, (uint16_t)scan_interval_window);
+}
+
+static void cmd_scan_stop(const char *param)
+{
+    btstack_push_user_msg(USER_MSG_ID_SCAN_STOP, NULL, 0);
 }
 
 static cmd_t cmds[] =
@@ -72,6 +145,18 @@ static cmd_t cmds[] =
     {
         .cmd = "name",
         .handler = cmd_name
+    },
+    {
+        .cmd = "interval",
+        .handler = cmd_interval
+    },
+    {
+        .cmd = "scan_start",
+        .handler = cmd_scan_start
+    },
+    {
+        .cmd = "scan_stop",
+        .handler = cmd_scan_stop
     },
 };
 
