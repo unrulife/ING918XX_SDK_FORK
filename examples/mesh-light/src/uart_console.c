@@ -8,6 +8,7 @@
 #include "platform_api.h"
 #include "mesh_storage_low_level.h"
 #include "mesh_profile.h"
+#include "app_config.h"
 
 typedef void (*f_cmd_handler)(const char *param);
 
@@ -30,6 +31,7 @@ static const char help[] =  "commands:\n"
                             "  interval ddd          update connection interval to ddd\n"
                             "  scan_start ddd        start scan, interval=ddd, window=ddd\n"
                             "  scan_stop             stop scan\n"
+                            "  rf_start              start rf tx rx test\n"
                             "  name sss              set name to sss\n";
 
 void cmd_help(const char *param)
@@ -128,6 +130,19 @@ static void cmd_scan_stop(const char *param)
     btstack_push_user_msg(USER_MSG_ID_SCAN_STOP, NULL, 0);
 }
 
+static void cmd_rf_start(const char *param)
+{
+#ifdef ENABLE_RF_TX_RX_TEST
+    #include "RF_TEST.H"
+    IngRfTest_btstack_ready();
+    platform_printf("rf_start.\n");
+    return;
+#else
+    platform_printf("not define ENABLE_RF_TX_RX_TEST \n");
+#endif
+}
+
+
 static cmd_t cmds[] =
 {
     {
@@ -157,6 +172,10 @@ static cmd_t cmds[] =
     {
         .cmd = "scan_stop",
         .handler = cmd_scan_stop
+    },
+    {
+        .cmd = "rf_start",
+        .handler = cmd_rf_start
     },
 };
 
