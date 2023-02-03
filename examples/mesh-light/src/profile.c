@@ -12,6 +12,7 @@
 #define APP_LOG_INFO_EN
 
 #include "app_debug.h"
+#include "mesh_debug.h"
 
 /*--------------------------------------------------------------------
  *----------------------------> MODEL <-------------------------------
@@ -294,5 +295,6 @@ void mesh_init(void){
     mesh_stack_init(&mesh_elements_init);
     mesh_provising_init();
     mesh_basic_info_print();
+    // mesh_trace_config(ADV_LAYER, INFO_LVL|WARN_LVL);
 }
 
