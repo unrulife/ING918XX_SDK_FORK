@@ -36,8 +36,8 @@
 // If the interval and window are equal, the duty cycle is 100 percent.
 // scan_duty_cycle = scan_window/scan_interval.
 // The scan_interval can not be smaller than the scan_window.
-#define SCAN_CONFIG_SCAN_INTERVAl_MS  30 //set scan interval.
-#define SCAN_CONFIG_SCAN_WINDOW_MS    15 //set scan window.
+#define SCAN_CONFIG_SCAN_INTERVAl_MS  20 //set scan interval.
+#define SCAN_CONFIG_SCAN_WINDOW_MS    20 //set scan window.
 #define SCAN_SET_TIME_MS(x)  (uint16_t)(x * 1000 / 625)
 
 // var.
