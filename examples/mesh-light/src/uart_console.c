@@ -9,6 +9,7 @@
 #include "mesh_storage_low_level.h"
 #include "mesh_profile.h"
 #include "app_config.h"
+#include "adv_bearer.h"
 
 typedef void (*f_cmd_handler)(const char *param);
 
@@ -32,6 +33,8 @@ static const char help[] =  "commands:\n"
                             "  scan_start ddd        start scan, interval=ddd, window=ddd\n"
                             "  scan_stop             stop scan\n"
                             "  rf_start              start rf tx rx test\n"
+                            "  adv_send              send non-conn adv data\n"
+                            "  toggle_led x          toggle led x, x= a or b, a is gpio11, b is gpio10\n"
                             "  name sss              set name to sss\n";
 
 void cmd_help(const char *param)
@@ -64,6 +67,7 @@ static void cmd_name(const char *param)
 #define USER_MSG_ID_SCAN_START          (0x50) // 
 #define USER_MSG_ID_SCAN_STOP           (0x51) // 
 #define USER_MSG_ID_UPDATE_CONN_PARAM   (0x52) // 
+#define USER_MSG_ID_NON_ADV_SEND        (0x53) // 
 
 // conn update.
 #define CPI_VAL_TO_MS(x)    ((uint16_t)(x * 5 / 4))
@@ -95,10 +99,17 @@ void uart_cmd_msg_handler(btstack_user_msg_t * usrmsg){
             {
                 uint16_t interval_ms = usrmsg->len;
                 gap_update_connection_parameters(   ble_get_curr_conn_handle(), \
-                           CPI_MS_TO_VAL(interval_ms), CPI_MS_TO_VAL(interval_ms), \
-                           0, CPSTT_MS_TO_VAL(5000), NULL, NULL);//slave can not change ce_len, use [ll_hint_on_ce_len] to set slave local ce_len
+                            CPI_MS_TO_VAL(interval_ms), CPI_MS_TO_VAL(interval_ms), \
+                            0, CPSTT_MS_TO_VAL(5000), NULL, NULL);//slave can not change ce_len, use [ll_hint_on_ce_len] to set slave local ce_len
 
                 platform_printf("update connect interval request!\n");
+            }
+            break;
+        case USER_MSG_ID_NON_ADV_SEND:
+            {
+                platform_printf("non adv send!\n");
+                static char tmpBuf[] = "1224354565454";
+                adv_bearer_send_network_pdu((const uint8_t *)tmpBuf, strlen(tmpBuf), 5, 20);
             }
             break;
     }
@@ -142,6 +153,25 @@ static void cmd_rf_start(const char *param)
 #endif
 }
 
+static void cmd_adv_send(const char *param)
+{
+    btstack_push_user_msg(USER_MSG_ID_NON_ADV_SEND, NULL, 0);
+}
+
+extern void toggle_indicate_led_a(void);
+extern void toggle_indicate_led_b(void);
+static void cmd_toggle_led(const char *param)
+{
+    platform_printf("Toggle led.\n");
+    memset(buffer, 0, sizeof(buffer));
+    if (sscanf(param, "%s", buffer) != 1) return;    
+    platform_printf("Toggle led %s.\n", buffer);
+    if(buffer[0] == 'a'){
+        toggle_indicate_led_a();
+    } else {
+        toggle_indicate_led_b();
+    }
+}
 
 static cmd_t cmds[] =
 {
@@ -177,6 +207,15 @@ static cmd_t cmds[] =
         .cmd = "rf_start",
         .handler = cmd_rf_start
     },
+    {
+        .cmd = "adv_send",
+        .handler = cmd_adv_send
+    },
+    {
+        .cmd = "toggle_led",
+        .handler = cmd_toggle_led
+    },
+    
 };
 
 void handle_command(char *cmd_line)
