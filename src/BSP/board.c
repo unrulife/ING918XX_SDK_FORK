@@ -162,23 +162,24 @@ void setup_rgb_led()
 
 void toggle_indicate_led_a(void)
 {
-    if(GIO_ReadValue(PIN_TEST_LEDA)){
-        printf("led a is on.");
+    if(GIO_ReadOutputValue(PIN_TEST_LEDA)){
+        printf("led a is on.\n");
         GIO_WriteValue(PIN_TEST_LEDA, 0);
     } else {
-        printf("led a is off.");
+        printf("led a is off.\n");
         GIO_WriteValue(PIN_TEST_LEDA, 1);
     }
 }
 
 void toggle_indicate_led_b(void)
 {
-    if(GIO_ReadValue(PIN_TEST_LEDB)){
-        printf("led b is on.");
-        GIO_WriteValue(PIN_TEST_LEDB, 0);
+    GIO_ToggleBits(1<<PIN_TEST_LEDB);//Through toggle interface to control gpio.
+    if(GIO_ReadOutputValue(PIN_TEST_LEDB)){
+        printf("led b is on.\n");
+        //GIO_WriteValue(PIN_TEST_LEDB, 0);
     } else {
-        printf("led b is off.");
-        GIO_WriteValue(PIN_TEST_LEDB, 1);
+        printf("led b is off.\n");
+        //GIO_WriteValue(PIN_TEST_LEDB, 1);
     }
 }
 
@@ -198,8 +199,8 @@ void setup_indicate_led(void)
     SYSCTRL_ClearClkGateMulti((1 << SYSCTRL_ClkGate_APB_GPIO0));
     PINCTRL_SetPadMux(PIN_TEST_LEDA, IO_SOURCE_GPIO);
     PINCTRL_SetPadMux(PIN_TEST_LEDB, IO_SOURCE_GPIO);
-    GIO_SetDirection(PIN_TEST_LEDA, GIO_DIR_BOTH); //use GIO_ReadValue must set both dir.
-    GIO_SetDirection(PIN_TEST_LEDB, GIO_DIR_BOTH);
+    GIO_SetDirection(PIN_TEST_LEDA, GIO_DIR_OUTPUT);
+    GIO_SetDirection(PIN_TEST_LEDB, GIO_DIR_OUTPUT);
     GIO_WriteValue(PIN_TEST_LEDA, 0);
     GIO_WriteValue(PIN_TEST_LEDB, 0);
 #endif
