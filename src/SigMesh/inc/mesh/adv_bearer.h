@@ -13,6 +13,33 @@
 extern "C" {
 #endif
 
+// function to handle mesh adv bearer.
+typedef void (*mesh_adv_bearer_handler)(void *data, uint16_t data_len);
+
+// enum.
+typedef enum {
+    MESH_ADV_BEARER_SEND_NON_CONN_ADV_START,
+    MESH_ADV_BEARER_SEND_NON_CONN_ADV_STOP,
+} mesh_adv_bearer_register_func_type_t;
+
+// struct.
+typedef struct {
+	mesh_adv_bearer_handler send_non_conn_adv_start;
+    mesh_adv_bearer_handler send_non_conn_adv_stop;
+} mesh_adv_bearer_handler_t;
+
+typedef struct {
+	uint8_t *adv_data;
+	uint8_t adv_length;
+	uint8_t type;
+	uint8_t count;
+	uint16_t interval_ms;
+} mesh_adv_bearer_send_non_conn_adv_start_t;
+
+// API
+void adv_bearer_register(mesh_adv_bearer_register_func_type_t type, mesh_adv_bearer_handler _handler);
+
+
 typedef struct {
 	void * next;
 	uint8_t adv_length;
