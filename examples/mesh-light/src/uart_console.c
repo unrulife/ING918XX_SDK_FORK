@@ -10,6 +10,7 @@
 #include "mesh_profile.h"
 #include "app_config.h"
 #include "adv_bearer.h"
+#include "mesh.h"
 
 typedef void (*f_cmd_handler)(const char *param);
 
@@ -35,6 +36,8 @@ static const char help[] =  "commands:\n"
                             "  rf_start              start rf tx rx test\n"
                             "  adv_send              send non-conn adv data\n"
                             "  toggle_led x          toggle led x, x= a or b, a is gpio11, b is gpio10\n"
+                            "  gatt_adv_start        gatt advertising start.\n"
+                            "  gatt_adv_stop         gatt advertising stop.\n"
                             "  name sss              set name to sss\n";
 
 void cmd_help(const char *param)
@@ -68,6 +71,8 @@ static void cmd_name(const char *param)
 #define USER_MSG_ID_SCAN_STOP           (0x51) // 
 #define USER_MSG_ID_UPDATE_CONN_PARAM   (0x52) // 
 #define USER_MSG_ID_NON_ADV_SEND        (0x53) // 
+#define USER_MSG_ID_GATT_ADV_START      (0x54) // 
+#define USER_MSG_ID_GATT_ADV_STOP       (0x55) // 
 
 // conn update.
 #define CPI_VAL_TO_MS(x)    ((uint16_t)(x * 5 / 4))
@@ -110,6 +115,18 @@ void uart_cmd_msg_handler(btstack_user_msg_t * usrmsg){
                 platform_printf("non adv send!\n");
                 static char tmpBuf[] = "1224354565454";
                 adv_bearer_send_network_pdu((const uint8_t *)tmpBuf, strlen(tmpBuf), 5, 20);
+            }
+            break;
+        case USER_MSG_ID_GATT_ADV_START:
+            {
+                platform_printf("gatt adv start!\n");
+                mesh_proxy_start_gatt_advertising();
+            }
+            break;
+        case USER_MSG_ID_GATT_ADV_STOP:
+            {
+                platform_printf("gatt adv stop!\n");
+                mesh_proxy_stop_gatt_advertising();
             }
             break;
     }
@@ -173,6 +190,19 @@ static void cmd_toggle_led(const char *param)
     }
 }
 
+
+static void cmd_gatt_adv_start(const char *param)
+{
+    btstack_push_user_msg(USER_MSG_ID_GATT_ADV_START, NULL, 0);
+}
+
+static void cmd_gatt_adv_stop(const char *param)
+{
+    btstack_push_user_msg(USER_MSG_ID_GATT_ADV_STOP, NULL, 0);
+}
+
+
+
 static cmd_t cmds[] =
 {
     {
@@ -214,6 +244,14 @@ static cmd_t cmds[] =
     {
         .cmd = "toggle_led",
         .handler = cmd_toggle_led
+    },
+    {
+        .cmd = "gatt_adv_start",
+        .handler = cmd_gatt_adv_start
+    },
+    {
+        .cmd = "gatt_adv_stop",
+        .handler = cmd_gatt_adv_stop
     },
     
 };
