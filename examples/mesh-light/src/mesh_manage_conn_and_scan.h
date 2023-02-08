@@ -39,5 +39,7 @@ void mesh_mcas_on_off_server_control_callback(void);
 void mesh_mcas_conn_params_update_complete_callback(uint8_t status, uint16_t handle, uint16_t interval, uint16_t sup_timeout);
 void mesh_mcas_connect_callback(uint16_t handle);
 void mesh_mcas_disconnect_callback(uint16_t handle);
+void mesh_non_conn_adv_start_callback(void);
+void mesh_non_conn_adv_stop_callback(void);
 
 #endif

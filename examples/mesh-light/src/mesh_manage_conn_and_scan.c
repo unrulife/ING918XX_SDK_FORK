@@ -142,7 +142,6 @@ void mesh_mcas_on_off_server_control_callback(void){
 
 /**
  * @brief mesh mcas scan start.
- * @param connect_interval fixed = 20ms 
  */
 void mesh_mcas_scan_start(void){
     mesh_scan_stop();
@@ -150,6 +149,15 @@ void mesh_mcas_scan_start(void){
     mesh_scan_param_set(MESH_FINAL_SCAN_INTERVAL_MS, MESH_FINAL_SCAN_INTERVAL_MS);
     mesh_scan_start();
     MeshConnScan.scan_state = MESH_SCAN_STATE_INTERVAL_20_WINDOW_20;
+}
+
+/**
+ * @brief mesh mcas scan stop.
+ * 
+ */
+void mesh_mcas_scan_stop(void){
+    mesh_scan_stop();
+    MeshConnScan.scan_state = MESH_SCAN_STATE_IDLE;
 }
 
 /**
@@ -213,8 +221,7 @@ void mesh_mcas_connect_callback(uint16_t handle){
     mesh_conn_param_update_timer_stop();
     MeshConnScan.run_state = MESH_RUNNING_STATE_IDLE;
 
-    mesh_scan_stop();
-    MeshConnScan.scan_state = MESH_SCAN_STATE_IDLE;
+    mesh_mcas_scan_stop();
 
     return;
 }
@@ -230,10 +237,22 @@ void mesh_mcas_disconnect_callback(uint16_t handle){
     mesh_conn_param_update_timer_stop();
     MeshConnScan.run_state = MESH_RUNNING_STATE_IDLE;
 
-    // mesh_scan_stop();
-    // MeshConnScan.scan_state = MESH_SCAN_STATE_IDLE;
-
     return;
 }
 
+/**
+ * @brief mesh non-connection advertisment start callback.
+ * 
+ */
+void mesh_non_conn_adv_start_callback(void){
+    mesh_mcas_scan_stop();
+}
+
+/**
+ * @brief mesh non-connection advertisment stop callback.
+ * 
+ */
+void mesh_non_conn_adv_stop_callback(void){
+    mesh_mcas_scan_start();
+}
 
