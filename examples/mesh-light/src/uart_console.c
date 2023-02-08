@@ -114,7 +114,7 @@ void uart_cmd_msg_handler(btstack_user_msg_t * usrmsg){
             {
                 platform_printf("non adv send!\n");
                 static char tmpBuf[] = "1224354565454";
-                adv_bearer_send_network_pdu((const uint8_t *)tmpBuf, strlen(tmpBuf), 5, 20);
+                adv_bearer_send_network_pdu((const uint8_t *)tmpBuf, strlen(tmpBuf), 3, 100);
             }
             break;
         case USER_MSG_ID_GATT_ADV_START:
