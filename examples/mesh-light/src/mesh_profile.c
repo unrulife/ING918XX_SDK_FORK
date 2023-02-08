@@ -48,7 +48,7 @@ static bd_addr_t m_gatt_adv_addr;
 static bd_addr_t m_beacon_adv_addr;
 
 const static ext_adv_set_en_t adv_sets_en[2] = {{.handle = MESH_PROXY_ADV_HANDLE, .duration = 0, .max_events = 0},
-                                                {.handle = MESH_PB_ADV_HANDLE,    .duration = 0, .max_events = 0}};
+                                                {.handle = MESH_PB_ADV_HANDLE,    .duration = 0, .max_events = 1}};
 
 static bd_addr_t m_rnd_addr_scan = {0xFD, 0x51, 0x52, 0x53, 0x53, 0x02};
 
