@@ -35,8 +35,8 @@ static bt_mesh_cfg_srv_t cfg_srv = {
     .default_ttl = 7,
 
     /* 3 transmissions with 20ms interval */
-    .net_transmit = BT_MESH_TRANSMIT(5, 40),
-    .relay_retransmit = BT_MESH_TRANSMIT(5, 40),
+    .net_transmit = BT_MESH_TRANSMIT(3, 100),
+    .relay_retransmit = BT_MESH_TRANSMIT(3, 100),
 
 };
 
