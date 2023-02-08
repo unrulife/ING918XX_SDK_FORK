@@ -247,9 +247,9 @@ void mesh_setup_scan(void){
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /* API START */
 void ble_set_conn_interval_ms(uint16_t interval_ms){
-    gap_update_connection_parameters(   ble_get_curr_conn_handle(), CPI_MS_TO_VAL(interval_ms), CPI_MS_TO_VAL(interval_ms), 
-                                        0, CPSTT_MS_TO_VAL(5000), 0, 8);//ce_len = unit 0.625ms. 8*0.625=5ms
-
+    gap_update_connection_parameters(   ble_get_curr_conn_handle(), \
+                            CPI_MS_TO_VAL(interval_ms), CPI_MS_TO_VAL(interval_ms), \
+                            0, CPSTT_MS_TO_VAL(5000), NULL, NULL);//slave can not change ce_len, use [ll_hint_on_ce_len] to set slave local ce_len
 }
 
 

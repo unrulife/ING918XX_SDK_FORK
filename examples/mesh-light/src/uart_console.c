@@ -103,10 +103,7 @@ void uart_cmd_msg_handler(btstack_user_msg_t * usrmsg){
         case USER_MSG_ID_UPDATE_CONN_PARAM:
             {
                 uint16_t interval_ms = usrmsg->len;
-                gap_update_connection_parameters(   ble_get_curr_conn_handle(), \
-                            CPI_MS_TO_VAL(interval_ms), CPI_MS_TO_VAL(interval_ms), \
-                            0, CPSTT_MS_TO_VAL(5000), NULL, NULL);//slave can not change ce_len, use [ll_hint_on_ce_len] to set slave local ce_len
-
+                ble_set_conn_interval_ms(interval_ms);
                 platform_printf("update connect interval request!\n");
             }
             break;
