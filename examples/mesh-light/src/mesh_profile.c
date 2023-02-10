@@ -193,6 +193,20 @@ void mesh_pb_adv_enable(int enabled){
     mesh_advertisements_enable(MESH_PB_ADV_HANDLE, enabled);
 }
 
+static void mesh_adv_bearer_send_non_conn_adv_start(void *data, uint16_t data_len){
+    mesh_adv_bearer_send_non_conn_adv_start_t *adv_start = (mesh_adv_bearer_send_non_conn_adv_start_t *)data;
+    platform_printf("\nnon_adv_start,%d,%dms\n", adv_start->count, adv_start->interval_ms);
+    if(adv_start->type == 0x2A){ // Mesh Message
+        mesh_mcas_on_off_server_control_callback(); //update conn interval.
+    }
+    // mesh_non_conn_adv_start_callback(); //stop scan.
+}
+
+static void mesh_adv_bearer_send_non_conn_adv_stop(void *data, uint16_t data_len){
+    platform_printf("non_adv_stop.\n");
+    // mesh_non_conn_adv_stop_callback(); //start scan.
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // set scan addr.
 static void mesh_scan_addr_set(void){
@@ -514,6 +528,10 @@ uint32_t setup_profile(void *data, void *user_data)
 {
     // mesh init.
     mesh_init();
+    
+    // mesh func register.
+    adv_bearer_register(MESH_ADV_BEARER_SEND_NON_CONN_ADV_START, &mesh_adv_bearer_send_non_conn_adv_start);
+    adv_bearer_register(MESH_ADV_BEARER_SEND_NON_CONN_ADV_STOP, &mesh_adv_bearer_send_non_conn_adv_stop);
 
     // ble init.
     static btstack_packet_callback_registration_t mesh_hci_event_callback_registration;
