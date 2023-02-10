@@ -179,6 +179,10 @@ void mesh_proxy_adv_set_data(uint8_t advertising_data_length, uint8_t * advertis
 
 void mesh_pb_adv_set_data(uint8_t advertising_data_length, uint8_t * advertising_data){
     gap_set_ext_adv_data(MESH_PB_ADV_HANDLE, advertising_data_length, advertising_data);
+    // platform_printf("Tx adv_data= ");
+    // printf_hexdump(advertising_data, advertising_data_length);
+    printf("TxM(%02X%02X)[%d]:", m_beacon_adv_addr[0], m_beacon_adv_addr[5], advertising_data_length);
+    printf_hexdump(&advertising_data[advertising_data_length-3], 2);
 }
 
 void mesh_proxy_scan_rsp_set_data(const uint16_t length, const uint8_t *data){
@@ -444,16 +448,16 @@ static void user_packet_handler(uint8_t packet_type, uint16_t channel, const uin
 
                     switch(report->data[1]){
                         case BLUETOOTH_DATA_TYPE_MESH_MESSAGE:
-                            printf("Message adv[%d]:", report->data_len);
-                            printf_hexdump(report->data, report->data_len);
+                            printf(" #RxM(%02X%02X)[%d]:", report->address[5], report->address[0], report->data_len);
+                            printf_hexdump(&report->data[report->data_len-3], 2);
                             break;
                         case BLUETOOTH_DATA_TYPE_MESH_BEACON:
-                            printf("Beacon adv[%d]:", report->data_len);
-                            printf_hexdump(report->data, report->data_len);
+                            // printf("Beacon adv[%d]:", report->data_len);
+                            // printf_hexdump(report->data, report->data_len);
                             break;
                         case BLUETOOTH_DATA_TYPE_PB_ADV:
-                            printf("pb adv[%d]:", report->data_len);
-                            printf_hexdump(report->data, report->data_len);
+                            // printf("pb adv[%d]:", report->data_len);
+                            // printf_hexdump(report->data, report->data_len);
                             break;
                         default:
                             break;
