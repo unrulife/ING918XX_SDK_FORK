@@ -214,22 +214,27 @@ void mesh_scan_param_set(uint16_t interval_ms, uint8_t window_ms){
 }
 
 // scan enable or disable.
-void mesh_scan_run_set(uint8_t en){
+void mesh_scan_run_set(uint8_t en, uint16_t scan_timeout_ms){
     app_log_debug("%s\n", __func__);
     // Scan disable.
-    if (0 != gap_set_ext_scan_enable(en, 0, 0, 0)){
+    if (0 != gap_set_ext_scan_enable(en, 0, scan_timeout_ms/10, 0)){
         app_log_error("=============>ERR - %s, en = %d\n", __func__, en);
     }
 }
 
-void mesh_scan_start(void){
-    app_log_debug("%s\n", __func__);
-    mesh_scan_run_set(1);
+void mesh_duty_scan_start(void){
+    // printf("%s\n", __func__);
+    mesh_scan_run_set(1, 0);
+}
+
+void mesh_scan_once_start(uint16_t scan_timeout_ms){
+    // printf("%s\n", __func__);
+    mesh_scan_run_set(1, scan_timeout_ms);
 }
 
 void mesh_scan_stop(void){
-    app_log_debug("%s\n", __func__);
-    mesh_scan_run_set(0);
+    // printf("%s\n", __func__);
+    mesh_scan_run_set(0, 0);
 }
 
 void mesh_setup_scan(void){

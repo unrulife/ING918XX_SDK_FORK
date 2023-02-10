@@ -20,6 +20,15 @@ typedef struct
     f_cmd_handler handler;
 } cmd_t;
 
+typedef struct
+{
+    uint32_t cnt;
+    uint16_t interval_ms;
+    uint16_t window_ms;
+    uint16_t duration_ms;
+} mesh_scan_control_t;
+static mesh_scan_control_t scanParam;
+
 void print_addr(const uint8_t *addr)
 {
     platform_printf("%02X:%02X:%02X:%02X:%02X:%02X\n", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
@@ -87,17 +96,17 @@ void uart_cmd_msg_handler(btstack_user_msg_t * usrmsg){
     switch(cmd_id){
         case USER_MSG_ID_SCAN_START:
             {
-                uint16_t scan_interval_window = usrmsg->len;
-                mesh_scan_stop();
-                mesh_scan_param_set(scan_interval_window, scan_interval_window);
-                mesh_scan_start();
+                mesh_scan_control_t *scan = (mesh_scan_control_t *)usrmsg->data;
+                // mesh_scan_stop();
+                mesh_scan_param_set(scan->interval_ms, scan->window_ms);
+                mesh_duty_scan_start();
                 platform_printf("scan start!\n");
             }
             break;
         case USER_MSG_ID_SCAN_STOP:
             {
-                mesh_scan_stop();
                 platform_printf("scan stop!\n");
+                mesh_scan_stop();
             }
             break;
         case USER_MSG_ID_UPDATE_CONN_PARAM:
@@ -144,10 +153,16 @@ static void cmd_interval(const char *param)
 
 static void cmd_scan_start(const char *param)
 {
-    int scan_interval_window;
-    if (sscanf(param, "%d", &scan_interval_window) != 1) return;
-    platform_printf("scan_interval: %dms, scan_window: %dms\n", scan_interval_window, scan_interval_window);    
-    btstack_push_user_msg(USER_MSG_ID_SCAN_START, NULL, (uint16_t)scan_interval_window);
+    int param_len = sscanf(param, "%d %d", (int *)&scanParam.interval_ms, (int *)&scanParam.window_ms);
+    if (param_len == 1){
+        scanParam.window_ms = scanParam.interval_ms;
+    } else if (param_len == 2){
+    } else {
+        cmd_help(NULL);
+        return;
+    }
+    platform_printf("scan_interval: %dms, scan_window: %dms\n", scanParam.interval_ms, scanParam.window_ms); 
+    btstack_push_user_msg(USER_MSG_ID_SCAN_START, &scanParam, 0);
 }
 
 static void cmd_scan_stop(const char *param)

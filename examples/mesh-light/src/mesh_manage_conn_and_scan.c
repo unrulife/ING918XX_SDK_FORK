@@ -147,7 +147,7 @@ void mesh_mcas_scan_start(void){
     mesh_scan_stop();
     // scan = 20ms.
     mesh_scan_param_set(MESH_FINAL_SCAN_INTERVAL_MS, MESH_FINAL_SCAN_INTERVAL_MS);
-    mesh_scan_start();
+    mesh_duty_scan_start();
     MeshConnScan.scan_state = MESH_SCAN_STATE_INTERVAL_20_WINDOW_20;
 }
 
