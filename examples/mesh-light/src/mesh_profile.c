@@ -497,6 +497,30 @@ static void user_packet_handler(uint8_t packet_type, uint16_t channel, const uin
                     mesh_scan_timeout_handler();
                 }
                 break;
+            case HCI_SUBEVENT_LE_ADVERTISING_SET_TERMINATED:{
+                    pb_adv_cnt_stop_us = platform_get_us_time();
+
+                    typedef struct le_meta_event_adv_set_terminate
+                    {
+                        uint8_t             status;
+                        uint8_t             adv_handle;
+                        uint16_t            conn_handle;
+                        uint8_t             num_complete_ext_adv;
+                    } le_meta_event_adv_set_terminate_t;
+
+                    const le_meta_event_adv_set_terminate_t *adv_term = 
+                                        decode_hci_le_meta_event(packet, le_meta_event_adv_set_terminate_t);
+                    // printf("adv stopped: %lldus\n\n", (pb_adv_cnt_stop_us - pb_adv_cnt_start_us));
+                    if(MESH_PB_ADV_HANDLE == adv_term->adv_handle){
+                        // mesh_non_conn_adv_stop_callback();
+                    }
+                    // printf("adv status:0x%x\n", adv_term->status);
+                    // printf("adv_handle:%d\n", adv_term->adv_handle);
+                    // printf("conn_handle:%d\n", adv_term->conn_handle);
+                    // printf("num_complete_ext_adv:%d\n", adv_term->num_complete_ext_adv);
+
+                }                  
+                break;
             default:
                 break;
         }
