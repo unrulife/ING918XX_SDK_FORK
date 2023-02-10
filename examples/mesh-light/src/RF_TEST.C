@@ -5,6 +5,7 @@
 #include "RF_TEST.H"
 #include "app_config.h"
 #include "ingsoc.h"
+#include "platform_api.h"
 
 /**************************************************************************
  * 1. Define ENABLE_RF_TX_RX_TEST:
@@ -50,6 +51,13 @@ void IngRfTest_btstack_ready(void){
     set_gpio_2_6_for_rf_tx_rx();
 }
 
+uint32_t setup_lle(void *data, void *user_data)
+{
+    IngRfTest_btstack_ready();
+    return 0;
+}
+
 void IngRfTest_init(void){
     rf_tx_rx_gpio_init();
+    platform_set_evt_callback(PLATFORM_CB_EVT_LLE_INIT, setup_lle, NULL);
 }
