@@ -525,6 +525,20 @@ static void user_packet_handler(uint8_t packet_type, uint16_t channel, const uin
                 break;
         }
         break;
+    case HCI_EVENT_COMMAND_COMPLETE:{
+            uint8_t cmd_packs = hci_event_command_complete_get_num_hci_command_packets(packet);
+            uint16_t cmd_opcode = hci_event_command_complete_get_command_opcode(packet);
+            const uint8_t *pCmd_param = hci_event_command_complete_get_return_parameters(packet);
+            // platform_printf("==>cmd_complete,packs:0x%02x,opcode:0x%04x,param:0x%02x.\n", cmd_packs, cmd_opcode, pCmd_param[0]);
+            switch(cmd_opcode){
+                case 0x2042: //scan enable/disable.
+                    // platform_printf("==>cmd_complete,packs:0x%02x,status:0x%02x.\n", cmd_packs, pCmd_param[0]);
+                    
+                    toggle_indicate_led_b();
+                    break;
+            }
+        }
+        break;
 
     case HCI_EVENT_DISCONNECTION_COMPLETE:
         app_log_debug("disconnect.\n");
