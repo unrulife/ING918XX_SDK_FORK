@@ -162,25 +162,26 @@ void setup_rgb_led()
 
 void toggle_indicate_led_a(void)
 {
-    if(GIO_ReadOutputValue(PIN_TEST_LEDA)){
-        printf("led a is on.\n");
-        GIO_WriteValue(PIN_TEST_LEDA, 0);
-    } else {
-        printf("led a is off.\n");
-        GIO_WriteValue(PIN_TEST_LEDA, 1);
-    }
+    GIO_ToggleBits(1<<PIN_TEST_LEDA);//Through toggle interface to control gpio.
+//    if(GIO_ReadOutputValue(PIN_TEST_LEDA)){
+//        GIO_WriteValue(PIN_TEST_LEDA, 0);
+//        //printf("led a is on.\n");
+//    } else {
+//        GIO_WriteValue(PIN_TEST_LEDA, 1);
+//        //printf("led a is off.\n");
+//    }
 }
 
 void toggle_indicate_led_b(void)
 {
     GIO_ToggleBits(1<<PIN_TEST_LEDB);//Through toggle interface to control gpio.
-    if(GIO_ReadOutputValue(PIN_TEST_LEDB)){
-        printf("led b is on.\n");
-        //GIO_WriteValue(PIN_TEST_LEDB, 0);
-    } else {
-        printf("led b is off.\n");
-        //GIO_WriteValue(PIN_TEST_LEDB, 1);
-    }
+//    if(GIO_ReadOutputValue(PIN_TEST_LEDB)){
+//        //printf("led b is on.\n");
+//        //GIO_WriteValue(PIN_TEST_LEDB, 0);
+//    } else {
+//        //printf("led b is off.\n");
+//        //GIO_WriteValue(PIN_TEST_LEDB, 1);
+//    }
 }
 
 void set_indicate_led_a(uint8_t en)
