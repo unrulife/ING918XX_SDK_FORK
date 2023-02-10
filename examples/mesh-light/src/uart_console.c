@@ -42,6 +42,7 @@ static const char help[] =  "commands:\n"
                             "  interval ddd          update connection interval to ddd\n"
                             "  scan_start ddd        start scan, interval=ddd, window=ddd\n"
                             "  scan_stop             stop scan\n"
+                            "  scan_en [cnt,interval,window,duration]              scan enable once.\n"
                             "  rf_start              start rf tx rx test\n"
                             "  adv_send              send non-conn adv data\n"
                             "  toggle_led x          toggle led x, x= a or b, a is gpio11, b is gpio10\n"
@@ -82,6 +83,7 @@ static void cmd_name(const char *param)
 #define USER_MSG_ID_NON_ADV_SEND        (0x53) // 
 #define USER_MSG_ID_GATT_ADV_START      (0x54) // 
 #define USER_MSG_ID_GATT_ADV_STOP       (0x55) // 
+#define USER_MSG_ID_SCAN_ENABLE         (0x56) // 
 
 // conn update.
 #define CPI_VAL_TO_MS(x)    ((uint16_t)(x * 5 / 4))
@@ -135,6 +137,16 @@ void uart_cmd_msg_handler(btstack_user_msg_t * usrmsg){
                 mesh_proxy_stop_gatt_advertising();
             }
             break;
+        case USER_MSG_ID_SCAN_ENABLE:
+            {
+                mesh_scan_control_t *scan = (mesh_scan_control_t *)usrmsg->data;
+                platform_printf("SCAN ENABLE ONCE!\n");
+                mesh_scan_stop();
+                mesh_proxy_stop_gatt_advertising();
+                mesh_scan_manual_control_start(scan->cnt, scan->interval_ms, scan->window_ms, scan->duration_ms);
+            }
+            break;
+    
     }
 }
 
@@ -214,6 +226,17 @@ static void cmd_gatt_adv_stop(const char *param)
 }
 
 
+static void cmd_scan_enable(const char *param){    
+    if (sscanf(param, "%d %d %d %d", (int *)&scanParam.cnt, (int *)&scanParam.interval_ms, (int *)&scanParam.window_ms, (int *)&scanParam.duration_ms) != 4){
+        scanParam.cnt = 3;
+        scanParam.interval_ms = 20;
+        scanParam.window_ms = 20;
+        scanParam.duration_ms = 20;
+    }
+    platform_printf("cnt:%d, interval_ms:%d, window_ms:%d, duration_ms:%d\n", scanParam.cnt, scanParam.interval_ms, scanParam.window_ms, scanParam.duration_ms);
+    btstack_push_user_msg(USER_MSG_ID_SCAN_ENABLE, &scanParam, 0);
+}
+
 
 static cmd_t cmds[] =
 {
@@ -264,6 +287,10 @@ static cmd_t cmds[] =
     {
         .cmd = "gatt_adv_stop",
         .handler = cmd_gatt_adv_stop
+    },
+    {
+        .cmd = "scan_en",
+        .handler = cmd_scan_enable
     },
     
 };

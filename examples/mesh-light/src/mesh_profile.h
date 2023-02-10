@@ -33,6 +33,7 @@ void mesh_duty_scan_start(void);
 void mesh_scan_once_start(uint16_t scan_timeout_ms);
 void mesh_scan_stop(void);
 void mesh_setup_scan(void);
+void mesh_scan_manual_control_start(uint32_t cnt, uint16_t interval_ms, uint16_t window_ms, uint16_t duration_ms);
 
 // conn params.
 void ble_set_conn_interval_ms(uint16_t interval_ms);

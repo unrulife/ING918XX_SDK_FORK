@@ -16,6 +16,7 @@
 #include "mesh_storage_app.h" 
 #include "mesh_manage_conn_and_scan.h"
 #include "app_debug.h"
+#include "board.h"
 
 #define BLUETOOTH_DATA_TYPE_PB_ADV                                             0x29 // PB-ADV
 #define BLUETOOTH_DATA_TYPE_MESH_MESSAGE                                       0x2A // Mesh Message
@@ -248,6 +249,42 @@ void mesh_setup_scan(void){
     mesh_scan_param_set(SCAN_CONFIG_SCAN_INTERVAl_MS, SCAN_CONFIG_SCAN_WINDOW_MS);
 }
 
+/**
+ * @brief mesh scan start in manual mode.
+ * 
+ */
+static uint32_t local_run_cnt = 0;
+static uint16_t local_interval_ms = 20;
+static uint16_t local_window_ms = 20;
+static uint16_t local_duration_ms = 20;
+static void mesh_scan_only_once(void){
+    scan_phy_config_t       scan_config[1] = {{ .phy = PHY_1M, .type = SCAN_PASSIVE, 
+                                                .interval = SCAN_SET_TIME_MS(local_interval_ms), 
+                                                .window   = SCAN_SET_TIME_MS(local_window_ms)}};
+    if (0 != gap_set_ext_scan_para(BD_ADDR_TYPE_LE_RANDOM, SCAN_ACCEPT_ALL_EXCEPT_NOT_DIRECTED, 1, scan_config)){
+        app_log_error("=============>ERR - %s\n", __func__);
+    }
+    if (0 != gap_set_ext_scan_enable(1, 0, local_duration_ms/10, 0)){
+        app_log_error("=============>ERR - %s\n", __func__);
+    }
+    local_run_cnt--;
+}
+
+void mesh_scan_manual_control_start(uint32_t cnt, uint16_t interval_ms, uint16_t window_ms, uint16_t duration_ms){
+    local_run_cnt = cnt;
+    local_interval_ms = interval_ms;
+    local_window_ms = window_ms;
+    local_duration_ms = duration_ms;
+    if(local_run_cnt == 0) return;
+    mesh_scan_only_once();
+}
+
+static void mesh_scan_timeout_handler(void){
+    toggle_indicate_led_b();
+    if(local_run_cnt == 0) return;
+    mesh_scan_only_once();
+}
+
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /* API START */
@@ -436,7 +473,12 @@ static void user_packet_handler(uint8_t packet_type, uint16_t channel, const uin
                     }
                     mesh_mcas_conn_params_update_complete_callback(conn_update->status, conn_update->handle, conn_update->interval, conn_update->sup_timeout);
                 }
-			    break;
+                break;
+            case HCI_SUBEVENT_LE_SCAN_TIMEOUT:{
+                    // printf("\nscan stopped!\n");
+                    mesh_scan_timeout_handler();
+                }
+                break;
             default:
                 break;
         }
