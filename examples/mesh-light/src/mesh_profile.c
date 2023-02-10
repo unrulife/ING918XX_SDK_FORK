@@ -498,8 +498,6 @@ static void user_packet_handler(uint8_t packet_type, uint16_t channel, const uin
                 }
                 break;
             case HCI_SUBEVENT_LE_ADVERTISING_SET_TERMINATED:{
-                    pb_adv_cnt_stop_us = platform_get_us_time();
-
                     typedef struct le_meta_event_adv_set_terminate
                     {
                         uint8_t             status;
