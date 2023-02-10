@@ -11,6 +11,7 @@
 #include "app_config.h"
 #include "adv_bearer.h"
 #include "mesh.h"
+#include "mesh_port_run_loop.h"
 
 typedef void (*f_cmd_handler)(const char *param);
 
@@ -45,6 +46,8 @@ static const char help[] =  "commands:\n"
                             "  scan_en [cnt,interval,window,duration]              scan enable once.\n"
                             "  rf_start              start rf tx rx test\n"
                             "  adv_send              send non-conn adv data\n"
+                            "  adv_auto duty_ms      auto send non-conn adv data, duty_ms is interval.\n"
+                            "  adv_end               stop auto send non-conn adv data\n"
                             "  toggle_led x          toggle led x, x= a or b, a is gpio11, b is gpio10\n"
                             "  gatt_adv_start        gatt advertising start.\n"
                             "  gatt_adv_stop         gatt advertising stop.\n"
@@ -237,6 +240,43 @@ static void cmd_scan_enable(const char *param){
     btstack_push_user_msg(USER_MSG_ID_SCAN_ENABLE, &scanParam, 0);
 }
 
+#if 1
+static uint8_t adv_auto_en_flag = 0;
+static uint16_t adv_auto_duty_ms = 1000;
+static mesh_timer_source_t adv_duty_timer;
+static void adv_bearer_scan_adv_delay_timer_start(uint32_t time_ms);
+static void adv_duty_timer_handler(void *context){
+    btstack_push_user_msg(USER_MSG_ID_NON_ADV_SEND, NULL, 0);
+    if(adv_auto_en_flag){
+        adv_bearer_scan_adv_delay_timer_start(adv_auto_duty_ms);
+    }
+}
+static void adv_bearer_scan_adv_delay_timer_start(uint32_t time_ms){
+    mesh_run_loop_set_timer_handler(&adv_duty_timer, (mesh_func_timer_process)&adv_duty_timer_handler);
+    mesh_run_loop_set_timer(&adv_duty_timer, time_ms);
+    mesh_run_loop_add_timer(&adv_duty_timer);
+}
+
+static void adv_auto_callback(void *data, uint16_t len){
+    adv_bearer_scan_adv_delay_timer_start(adv_auto_duty_ms);
+}
+
+static void cmd_adv_auto(const char *param)
+{
+    if(sscanf(param, "%d", (int *)&adv_auto_duty_ms) != 1){
+        adv_auto_duty_ms = 1000;
+    }
+    platform_printf("auto send duty: %dms\n", adv_auto_duty_ms);
+    adv_auto_en_flag = 1;
+    btstack_push_user_runnable(&adv_auto_callback, NULL, 0);
+}
+
+static void cmd_adv_end(const char *param)
+{
+    adv_auto_en_flag = 0;
+}
+#endif
+
 
 static cmd_t cmds[] =
 {
@@ -291,6 +331,14 @@ static cmd_t cmds[] =
     {
         .cmd = "scan_en",
         .handler = cmd_scan_enable
+    },
+    {
+        .cmd = "adv_auto",
+        .handler = cmd_adv_auto
+    },
+    {
+        .cmd = "adv_end",
+        .handler = cmd_adv_end
     },
     
 };
