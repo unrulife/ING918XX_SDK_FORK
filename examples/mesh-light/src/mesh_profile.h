@@ -27,7 +27,7 @@ void mesh_proxy_adv_enable(int enabled);
 void mesh_pb_adv_enable(int enabled);
 
 // scan.
-void mesh_scan_param_set(uint16_t interval_ms, uint8_t window_ms);
+void mesh_scan_param_set(uint16_t interval_ms, uint16_t window_ms);
 void mesh_scan_run_set(uint8_t en, uint16_t scan_timeout_ms);
 void mesh_duty_scan_start(void);
 void mesh_scan_once_start(uint16_t scan_timeout_ms);

@@ -219,7 +219,7 @@ static void mesh_scan_addr_set(void){
 
 /* API START */
 // set scan parameters.
-void mesh_scan_param_set(uint16_t interval_ms, uint8_t window_ms){
+void mesh_scan_param_set(uint16_t interval_ms, uint16_t window_ms){
     // Setup scan parameters.
     bd_addr_type_t          own_addr_type = BD_ADDR_TYPE_LE_RANDOM;
     scan_filter_policy_t    filter_policy = SCAN_ACCEPT_ALL_EXCEPT_NOT_DIRECTED;
