@@ -297,8 +297,7 @@ void mesh_scan_manual_control_start(uint32_t cnt, uint16_t interval_ms, uint16_t
     mesh_scan_only_once();
 }
 
-static void mesh_scan_timeout_handler(void){
-    toggle_indicate_led_b();
+static void mesh_scan_timeout_handler(void){    
     if(local_run_cnt == 0) return;
     mesh_scan_only_once();
 }
@@ -494,6 +493,7 @@ static void user_packet_handler(uint8_t packet_type, uint16_t channel, const uin
                 break;
             case HCI_SUBEVENT_LE_SCAN_TIMEOUT:{
                     // printf("\nscan stopped!\n");
+                    toggle_indicate_led_b();
                     mesh_scan_timeout_handler();
                 }
                 break;
