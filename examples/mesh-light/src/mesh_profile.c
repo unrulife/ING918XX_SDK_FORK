@@ -445,6 +445,12 @@ static void user_packet_handler(uint8_t packet_type, uint16_t channel, const uin
                     // only non-connectable ind
                     if (report->evt_type != 0x10) break;
 
+#ifdef ENABLE_ADV_SEND_RECV_DEBUG
+                    extern void adv_test_recv_non_conn_report(const le_ext_adv_report_t * report);
+                    adv_test_recv_non_conn_report(report);
+                    return;
+#endif
+
                     switch(report->data[1]){
                         case BLUETOOTH_DATA_TYPE_MESH_MESSAGE:
                             printf(" #RxM(%02X%02X)[%d]:", report->address[5], report->address[0], report->data_len);

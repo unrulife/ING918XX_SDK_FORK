@@ -33,4 +33,7 @@
 // eflash aligment.
 #define EFLASH_WRITE_SUPPORT_OFFSET_ADDR_NOT_ALIGMENT
 
+
+#define ENABLE_ADV_SEND_RECV_DEBUG
+
 #endif

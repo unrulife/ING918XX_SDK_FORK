@@ -40,17 +40,20 @@ static char buffer[30] = {0};
 static const char help[] =  "commands:\n"
                             "  h/?                   show this help\n"
                             "  reset                 system reset\n"
-                            "  interval ddd          update connection interval to ddd\n"
-                            "  scan_start ddd        start scan, interval=ddd, window=ddd\n"
-                            "  scan_stop             stop scan\n"
-                            "  scan_en [cnt,interval,window,duration]              scan enable once.\n"
                             "  rf_start              start rf tx rx test\n"
-                            "  adv_send              send non-conn adv data\n"
-                            "  adv_auto duty_ms      auto send non-conn adv data, duty_ms is interval.\n"
-                            "  adv_end               stop auto send non-conn adv data\n"
                             "  toggle_led x          toggle led x, x= a or b, a is gpio11, b is gpio10\n"
-                            "  gatt_adv_start        gatt advertising start.\n"
-                            "  gatt_adv_stop         gatt advertising stop.\n"
+                            "  interval ddd          update connection interval to ddd\n"
+                            "  scan_start ddd                           1. start scan, interval=ddd, window=ddd\n"
+                            "  scan_stop                                2. stop scan\n"
+                            "  scan_en [cnt,interval,window,duration]   3. scan enable once.\n"
+                            "  adv_send               1. send non-conn adv data\n"
+                            "  adv_auto [duty_ms]     2. auto send non-conn adv data, duty_ms is interval.\n"
+                            "  adv_end                3. stop auto send non-conn adv data\n"
+                            "  adv_set_role [master/slave]      1. set this mesh node to master node or slave node\n"
+                            "  adv_test_stop                    2. stop master node send adv message to slave node\n"
+                            "  adv_test_start [interval]        3. master node starts sending adv mesh message to slave node, the slave will send back. It will auto stop when master can't receive the response data.\n"
+                            "  gatt_adv_start          1. gatt advertising start.\n"
+                            "  gatt_adv_stop           2. gatt advertising stop.\n"
                             "  name sss              set name to sss\n";
 
 void cmd_help(const char *param)
@@ -278,6 +281,190 @@ static void cmd_adv_end(const char *param)
 #endif
 
 
+#if 1
+// role.
+enum{
+    ADV_TEST_ROLE_UNDEFINE,
+    ADV_TEST_ROLE_MASTER,
+    ADV_TEST_ROLE_SLAVE,
+};
+
+// state.
+enum{
+    ADV_TEST_STATE_IDLE,
+    ADV_TEST_STATE_SEND_REQ,
+    ADV_TEST_STATE_SEND_OK,
+    ADV_TEST_STATE_WAIT_STARTED,
+    ADV_TEST_STATE_WAIT_STOPPED,
+    ADV_TEST_STATE_CALC_RESULT,
+};
+
+typedef struct{
+    uint8_t state;
+    uint8_t role;
+    uint8_t en_flag;
+    uint16_t wait_ms;
+    mesh_timer_source_t wait_timer;
+    uint8_t send[32];
+    uint8_t send_len;
+    uint8_t send_cnt;
+    uint8_t recv_cnt;
+    uint8_t recv_ok;
+    uint32_t test_cnt;
+} adv_test_t;
+
+adv_test_t adv_test;
+
+static void adv_test_send_data(void);
+static void adv_test_wait_timer_handler(void *context);
+static void adv_test_wait_timer_start(uint32_t time_ms);
+static void adv_test_init(void);
+
+
+static int adv_test_check_recv(void){
+    if (adv_test.recv_ok != 1){
+        return -1;
+    }
+    return 0;
+}
+
+static void adv_test_wait_timer_handler(void *context){
+    // check recv.
+    if (-1 == adv_test_check_recv()){
+        platform_printf("recv error, stopped!!!\n");
+        return;
+    }
+
+    // calc count.
+    adv_test.test_cnt++;
+    platform_printf("test_cnt:%d\n", adv_test.test_cnt);
+
+    // send next.
+    adv_test_send_data();
+}
+
+static void adv_test_wait_timer_start(uint32_t time_ms){
+    mesh_run_loop_set_timer_handler(&adv_test.wait_timer, (mesh_func_timer_process)&adv_test_wait_timer_handler);
+    mesh_run_loop_set_timer(&adv_test.wait_timer, time_ms);
+    mesh_run_loop_add_timer(&adv_test.wait_timer);
+}
+
+static void cmd_adv_set_role(const char *param)
+{
+    if (sscanf(param, "%s", buffer) != 1) return;
+    if (memcmp(buffer, "master", 6) == 0){
+        adv_test.role = ADV_TEST_ROLE_MASTER;
+        platform_printf("role: master\n");
+        adv_test_init();
+    } else if (memcmp(buffer, "slave", 5) == 0){
+        adv_test.role = ADV_TEST_ROLE_SLAVE;
+        platform_printf("role: slave\n");
+        adv_test_init();
+    } else {
+        adv_test.role = ADV_TEST_ROLE_UNDEFINE;
+        platform_printf("role: undefine\n");
+    }
+}
+
+static void adv_test_callback(void *data, uint16_t len){
+    adv_test_send_data();
+}
+
+static void cmd_adv_test_start(const char *param)
+{
+    if (adv_test.role != ADV_TEST_ROLE_MASTER){
+        platform_printf("not master, return!!!\n");
+        return;
+    }
+
+    if(sscanf(param, "%d", (int *)&adv_test.wait_ms) != 1){
+        adv_test.wait_ms = 2000; //default 1s interval.
+    }
+    platform_printf("wait: %dms\n", adv_test.wait_ms);
+
+    adv_test.en_flag = 1;
+    adv_test.test_cnt = 0; //clear.
+    btstack_push_user_runnable(&adv_test_callback, NULL, 0);
+}
+static void cmd_adv_test_stop(const char *param)
+{
+    adv_test.en_flag = 0;
+}
+
+#define HEAD_0  0x19 //can't be (adv_test.send_len-1 = 25), or meshlib will care it.
+#define HEAD_1  0x32 //can't be 0x29,0x2A,0x2B
+extern void adv_bearer_send_test_pdu(uint8_t adv_len, uint8_t adv_type, const uint8_t * data, uint16_t data_len, uint8_t count, uint16_t interval);
+
+static void adv_test_init(void){
+    char tmpBuf[] = "123456789012345678901234";
+    adv_test.send[0] = HEAD_0;
+    adv_test.send[1] = HEAD_1;
+    memcpy(&adv_test.send[2], (char *)tmpBuf, strlen(tmpBuf));
+    adv_test.send_len = strlen(tmpBuf) + 2;
+    adv_test.send_cnt = 3;
+}
+
+static void adv_test_send_data(void){
+    if(adv_test.en_flag && adv_test.role == ADV_TEST_ROLE_MASTER){
+
+        adv_test.recv_ok = 0;  // clear
+        adv_test.recv_cnt = 0; // clear.
+        adv_test.send[3]++;    // different data.
+
+        printf("send_data(cnt=%d)[%d]: ", adv_test.send_cnt, adv_test.send_len);
+        printf_hexdump(adv_test.send, adv_test.send_len);
+
+        adv_bearer_send_test_pdu(HEAD_0, HEAD_1, (const uint8_t *)&adv_test.send[2], adv_test.send_len-2, adv_test.send_cnt, 100);
+        adv_test_wait_timer_start(adv_test.wait_ms);
+    }
+}
+
+void adv_test_recv_non_conn_report(const le_ext_adv_report_t * report){
+    // master recv.
+    if (adv_test.role == ADV_TEST_ROLE_MASTER){
+        if(report->data_len != adv_test.send_len) return;
+        if(report->data[1] != HEAD_1) return;
+
+        if(memcmp(adv_test.send, report->data, adv_test.send_len) == 0){
+            adv_test.recv_cnt ++;
+        }
+
+        // filter same.
+        static uint8_t cache = 0;
+        if(cache == report->data[3]) return;
+        cache = report->data[3];
+
+        printf("master recv(cnt=%d)[%d]: ", adv_test.recv_cnt, report->data_len);
+        printf_hexdump(report->data, report->data_len);
+
+        if(report->data[3] == adv_test.send[3]){
+            adv_test.recv_ok = 1;
+        }
+    }
+
+    // slave recv.
+    if (adv_test.role == ADV_TEST_ROLE_SLAVE){
+        if(report->data_len != adv_test.send_len) return;
+        if(report->data[1] != HEAD_1) return;
+
+        adv_test.recv_cnt ++;
+
+        // filter same.
+        static uint8_t cache = 0;
+        if(cache == report->data[3]) return;
+        cache = report->data[3];
+
+        // print
+        printf("slave recv(cnt=%d)[%d]: ", adv_test.recv_cnt, report->data_len);
+        printf_hexdump(report->data, report->data_len);
+
+        // send rsp.
+        adv_bearer_send_test_pdu(HEAD_0, HEAD_1, (const uint8_t *)&report->data[2], report->data_len-2, adv_test.send_cnt, 100);
+        adv_test.recv_cnt = 0;
+    }
+}
+#endif
+
 static cmd_t cmds[] =
 {
     {
@@ -339,6 +526,18 @@ static cmd_t cmds[] =
     {
         .cmd = "adv_end",
         .handler = cmd_adv_end
+    },
+    {
+        .cmd = "adv_set_role",
+        .handler = cmd_adv_set_role
+    },
+    {
+        .cmd = "adv_test_start",
+        .handler = cmd_adv_test_start
+    },
+    {
+        .cmd = "adv_test_stop",
+        .handler = cmd_adv_test_stop
     },
     
 };
