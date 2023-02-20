@@ -159,6 +159,7 @@ void mesh_proxy_adv_set_params( uint16_t  adv_int_min,
                                 bd_addr_t direct_address, 
                                 uint8_t   channel_map, 
                                 uint8_t   filter_policy){
+//    platform_printf("gatt adv set params.\n");
     mesh_adv_set_params(MESH_PROXY_ADV_HANDLE, adv_int_min, adv_int_max, adv_type, direct_address_typ, direct_address, channel_map, filter_policy);
 }
 
@@ -169,31 +170,41 @@ void mesh_pb_adv_set_params(uint16_t  adv_int_min,
                             bd_addr_t direct_address, 
                             uint8_t   channel_map, 
                             uint8_t   filter_policy){
+//    platform_printf("beacon adv set params.\n");
     mesh_adv_set_params(MESH_PB_ADV_HANDLE, adv_int_min, adv_int_max, adv_type, direct_address_typ, direct_address, channel_map, filter_policy);
 }
 
 
 void mesh_proxy_adv_set_data(uint8_t advertising_data_length, uint8_t * advertising_data){
+//    platform_printf("gatt adv set data.\n");
     gap_set_ext_adv_data(MESH_PROXY_ADV_HANDLE, advertising_data_length, advertising_data);
 }
 
 void mesh_pb_adv_set_data(uint8_t advertising_data_length, uint8_t * advertising_data){
+//    platform_printf("beacon adv set data.\n");
     gap_set_ext_adv_data(MESH_PB_ADV_HANDLE, advertising_data_length, advertising_data);
     // platform_printf("Tx adv_data= ");
     // printf_hexdump(advertising_data, advertising_data_length);
     printf("TxM(%02X%02X)[%d]:", m_beacon_adv_addr[0], m_beacon_adv_addr[5], advertising_data_length);
-    printf_hexdump(&advertising_data[advertising_data_length-3], 2);
+    printf_hexdump(&advertising_data[3], 1);
 }
 
 void mesh_proxy_scan_rsp_set_data(const uint16_t length, const uint8_t *data){
+//    platform_printf("scan rsp set data.\n");
     gap_set_ext_scan_response_data(MESH_PROXY_ADV_HANDLE, length, data);
 }
 
 void mesh_proxy_adv_enable(int enabled){
+//    platform_printf("gatt adv enable set:%d\n", enabled);
     mesh_advertisements_enable(MESH_PROXY_ADV_HANDLE, enabled);
 }
 
 void mesh_pb_adv_enable(int enabled){
+//    if(enabled == 0) return;
+//    platform_printf("beacon adv enable set:%d\n", enabled);
+    if(enabled == 1){
+        toggle_indicate_led_a(); //adv enable.
+    }
     mesh_advertisements_enable(MESH_PB_ADV_HANDLE, enabled);
 }
 
@@ -420,7 +431,8 @@ static int att_write_callback(hci_con_handle_t connection_handle, uint16_t att_h
 {
     return mesh_att_write_callback(connection_handle, att_handle, buffer, buffer_size);
 }
-
+static uint32_t adv_recv_cnt = 0;
+//extern void ll_lock_frequency(uint16_t);
 // handler
 static void user_packet_handler(uint8_t packet_type, uint16_t channel, const uint8_t *packet, uint16_t size)
 {
@@ -434,6 +446,8 @@ static void user_packet_handler(uint8_t packet_type, uint16_t channel, const uin
             break;
         app_log_debug("bt init ok.\n");
         mesh_stack_ready();
+//        ll_lock_frequency(2402);     // lock all rf tx&rx to 37 channel(include connection event).
+//        ll_scan_set_fixed_channel(37); // lock scan to 37 channel.
         break;
 
     case HCI_EVENT_LE_META:
@@ -446,14 +460,16 @@ static void user_packet_handler(uint8_t packet_type, uint16_t channel, const uin
                     if (report->evt_type != 0x10) break;
 
 #ifdef ENABLE_ADV_SEND_RECV_DEBUG
-                    extern void adv_test_recv_non_conn_report(const le_ext_adv_report_t * report);
-                    adv_test_recv_non_conn_report(report);
-                    return;
+                    extern uint8_t adv_test_recv_non_conn_report(const le_ext_adv_report_t * report);
+                    if(adv_test_recv_non_conn_report(report)){
+                        return;
+                    }
 #endif
 
                     switch(report->data[1]){
                         case BLUETOOTH_DATA_TYPE_MESH_MESSAGE:
-                            printf(" #RxM(%02X%02X)[%d]:", report->address[5], report->address[0], report->data_len);
+                            adv_recv_cnt ++;
+                            printf(" (%d)#RxM(%02X%02X)[%d]:",adv_recv_cnt, report->address[5], report->address[0], report->data_len);
                             printf_hexdump(&report->data[report->data_len-3], 2);
                             break;
                         case BLUETOOTH_DATA_TYPE_MESH_BEACON:
@@ -498,9 +514,10 @@ static void user_packet_handler(uint8_t packet_type, uint16_t channel, const uin
                 }
                 break;
             case HCI_SUBEVENT_LE_SCAN_TIMEOUT:{
-                    // printf("\nscan stopped!\n");
-                    toggle_indicate_led_b();
+                    extern void toggle_TEST_GPO_12(void);
+                    toggle_TEST_GPO_12(); //scan timeout.
                     mesh_scan_timeout_handler();
+                    printf("=======> scan stopped!\n");
                 }
                 break;
             case HCI_SUBEVENT_LE_ADVERTISING_SET_TERMINATED:{
@@ -517,6 +534,9 @@ static void user_packet_handler(uint8_t packet_type, uint16_t channel, const uin
                     // printf("adv stopped: %lldus\n\n", (pb_adv_cnt_stop_us - pb_adv_cnt_start_us));
                     if(MESH_PB_ADV_HANDLE == adv_term->adv_handle){
                         // mesh_non_conn_adv_stop_callback();
+                        toggle_indicate_led_b(); // adv set terminated.
+                        platform_trace_raw("1", 1);
+//                        platform_printf("beacon adv set terminated.\n");
                     }
                     // printf("adv status:0x%x\n", adv_term->status);
                     // printf("adv_handle:%d\n", adv_term->adv_handle);
@@ -538,7 +558,7 @@ static void user_packet_handler(uint8_t packet_type, uint16_t channel, const uin
                 case 0x2042: //scan enable/disable.
                     // platform_printf("==>cmd_complete,packs:0x%02x,status:0x%02x.\n", cmd_packs, pCmd_param[0]);
                     
-                    toggle_indicate_led_b();
+//                    toggle_indicate_led_b();
                     break;
             }
         }

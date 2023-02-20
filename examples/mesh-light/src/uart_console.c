@@ -41,14 +41,14 @@ static const char help[] =  "commands:\n"
                             "  h/?                   show this help\n"
                             "  reset                 system reset\n"
                             "  rf_start              start rf tx rx test\n"
-                            "  toggle_led x          toggle led x, x= a or b, a is gpio11, b is gpio10\n"
+                            "  toggle_led x          toggle led x, x= a or b, a is gpio11, b is gpio10, c is gpio12\n"
                             "  interval ddd          update connection interval to ddd\n"
                             "  scan_start ddd                           1. start scan, interval=ddd, window=ddd\n"
                             "  scan_stop                                2. stop scan\n"
                             "  scan_en [cnt,interval,window,duration]   3. scan enable once.\n"
-                            "  adv_send               1. send non-conn adv data\n"
-                            "  adv_auto [duty_ms]     2. auto send non-conn adv data, duty_ms is interval.\n"
-                            "  adv_end                3. stop auto send non-conn adv data\n"
+                            "  adv_send                          1. send non-conn adv data\n"
+                            "  adv_auto [duty_ms] [total_cnt]    2. auto send non-conn adv data, duty_ms is interval. total_cnt is the total count before stop.(0=always)\n"
+                            "  adv_end                           3. stop auto send non-conn adv data\n"
                             "  adv_set_role [master/slave]      1. set this mesh node to master node or slave node\n"
                             "  adv_test_stop                    2. stop master node send adv message to slave node\n"
                             "  adv_test_start [interval]        3. master node starts sending adv mesh message to slave node, the slave will send back. It will auto stop when master can't receive the response data.\n"
@@ -205,6 +205,7 @@ static void cmd_adv_send(const char *param)
     btstack_push_user_msg(USER_MSG_ID_NON_ADV_SEND, NULL, 0);
 }
 
+extern void toggle_TEST_GPO_12(void);
 extern void toggle_indicate_led_a(void);
 extern void toggle_indicate_led_b(void);
 static void cmd_toggle_led(const char *param)
@@ -215,8 +216,12 @@ static void cmd_toggle_led(const char *param)
     platform_printf("Toggle led %s.\n", buffer);
     if(buffer[0] == 'a'){
         toggle_indicate_led_a();
-    } else {
+    } else if(buffer[0] == 'b'){
         toggle_indicate_led_b();
+    } else if(buffer[0] == 'c'){
+        toggle_TEST_GPO_12();
+    } else {
+        platform_printf("not find.\n");
     }
 }
 
@@ -246,10 +251,23 @@ static void cmd_scan_enable(const char *param){
 #if 1
 static uint8_t adv_auto_en_flag = 0;
 static uint16_t adv_auto_duty_ms = 1000;
+static uint32_t adv_auto_total_cnt = 10;
+static uint32_t adv_auto_curr_cnt = 0;
 static mesh_timer_source_t adv_duty_timer;
 static void adv_bearer_scan_adv_delay_timer_start(uint32_t time_ms);
 static void adv_duty_timer_handler(void *context){
     btstack_push_user_msg(USER_MSG_ID_NON_ADV_SEND, NULL, 0);
+    
+    // calc.
+    if (adv_auto_total_cnt != 0){
+        adv_auto_curr_cnt++;
+        platform_printf("auto send cnt:%d\n", adv_auto_curr_cnt);
+        if (adv_auto_curr_cnt >= adv_auto_total_cnt){
+            adv_auto_en_flag = 0; //stop
+            platform_printf("auto send complete:%d\n", adv_auto_total_cnt);
+        }
+    }
+    
     if(adv_auto_en_flag){
         adv_bearer_scan_adv_delay_timer_start(adv_auto_duty_ms);
     }
@@ -266,10 +284,18 @@ static void adv_auto_callback(void *data, uint16_t len){
 
 static void cmd_adv_auto(const char *param)
 {
-    if(sscanf(param, "%d", (int *)&adv_auto_duty_ms) != 1){
+    int ret = sscanf(param, "%d %d", (int *)&adv_auto_duty_ms, (int *)&adv_auto_total_cnt);
+    
+    if(ret == 1){
+        adv_auto_total_cnt = 0; //always. 
+    } else if(ret ==2){
+        //do nothing.
+    } else {
         adv_auto_duty_ms = 1000;
+        adv_auto_total_cnt = 0; //always.
     }
-    platform_printf("auto send duty: %dms\n", adv_auto_duty_ms);
+    adv_auto_curr_cnt = 0;
+    platform_printf("auto send duty: %dms, total_cnt:%d(0=always)\n", adv_auto_duty_ms, adv_auto_total_cnt);
     adv_auto_en_flag = 1;
     btstack_push_user_runnable(&adv_auto_callback, NULL, 0);
 }
@@ -308,6 +334,7 @@ typedef struct{
     uint8_t send[32];
     uint8_t send_len;
     uint8_t send_cnt;
+    uint16_t send_interval;
     uint8_t recv_cnt;
     uint8_t recv_ok;
     uint32_t test_cnt;
@@ -318,7 +345,7 @@ adv_test_t adv_test;
 static void adv_test_send_data(void);
 static void adv_test_wait_timer_handler(void *context);
 static void adv_test_wait_timer_start(uint32_t time_ms);
-static void adv_test_init(void);
+static void adv_test_init(uint8_t role);
 
 
 static int adv_test_check_recv(void){
@@ -355,11 +382,11 @@ static void cmd_adv_set_role(const char *param)
     if (memcmp(buffer, "master", 6) == 0){
         adv_test.role = ADV_TEST_ROLE_MASTER;
         platform_printf("role: master\n");
-        adv_test_init();
+        adv_test_init(adv_test.role);
     } else if (memcmp(buffer, "slave", 5) == 0){
         adv_test.role = ADV_TEST_ROLE_SLAVE;
         platform_printf("role: slave\n");
-        adv_test_init();
+        adv_test_init(adv_test.role);
     } else {
         adv_test.role = ADV_TEST_ROLE_UNDEFINE;
         platform_printf("role: undefine\n");
@@ -391,17 +418,30 @@ static void cmd_adv_test_stop(const char *param)
     adv_test.en_flag = 0;
 }
 
+#define ADV_MASTER_SEND_COUNT   3
+#define ADV_MASTER_SEND_INTERVAL_MS     100
+
+#define ADV_SLAVE_SEND_COUNT    5
+#define ADV_SLAVE_SEND_INTERVAL_MS      50
+
 #define HEAD_0  0x19 //can't be (adv_test.send_len-1 = 25), or meshlib will care it.
 #define HEAD_1  0x32 //can't be 0x29,0x2A,0x2B
 extern void adv_bearer_send_test_pdu(uint8_t adv_len, uint8_t adv_type, const uint8_t * data, uint16_t data_len, uint8_t count, uint16_t interval);
-
-static void adv_test_init(void){
+extern void meshlib_adv_report_set(uint8_t en);
+static void adv_test_init(uint8_t role){
     char tmpBuf[] = "123456789012345678901234";
     adv_test.send[0] = HEAD_0;
     adv_test.send[1] = HEAD_1;
     memcpy(&adv_test.send[2], (char *)tmpBuf, strlen(tmpBuf));
     adv_test.send_len = strlen(tmpBuf) + 2;
-    adv_test.send_cnt = 3;
+    if(role == ADV_TEST_ROLE_MASTER){
+        adv_test.send_cnt = ADV_MASTER_SEND_COUNT;
+    } else {
+        adv_test.send_cnt = ADV_SLAVE_SEND_COUNT;
+    }
+#ifdef ENABLE_ADV_SEND_RECV_DEBUG
+    meshlib_adv_report_set(0); //close processing of HCI_SUBEVENT_LE_EXTENDED_ADVERTISING_REPORT in meshlib.
+#endif
 }
 
 static void adv_test_send_data(void){
@@ -411,19 +451,19 @@ static void adv_test_send_data(void){
         adv_test.recv_cnt = 0; // clear.
         adv_test.send[3]++;    // different data.
 
-        printf("send_data(cnt=%d)[%d]: ", adv_test.send_cnt, adv_test.send_len);
-        printf_hexdump(adv_test.send, adv_test.send_len);
+        printf("master send_data(cnt=%d)[%d]: ", adv_test.send_cnt, adv_test.send_len);
+        printf_hexdump(adv_test.send, 4);//adv_test.send_len);
 
-        adv_bearer_send_test_pdu(HEAD_0, HEAD_1, (const uint8_t *)&adv_test.send[2], adv_test.send_len-2, adv_test.send_cnt, 100);
+        adv_bearer_send_test_pdu(HEAD_0, HEAD_1, (const uint8_t *)&adv_test.send[2], adv_test.send_len-2, adv_test.send_cnt, ADV_MASTER_SEND_INTERVAL_MS);
         adv_test_wait_timer_start(adv_test.wait_ms);
     }
 }
 
-void adv_test_recv_non_conn_report(const le_ext_adv_report_t * report){
+uint8_t adv_test_recv_non_conn_report(const le_ext_adv_report_t * report){
     // master recv.
     if (adv_test.role == ADV_TEST_ROLE_MASTER){
-        if(report->data_len != adv_test.send_len) return;
-        if(report->data[1] != HEAD_1) return;
+        if(report->data_len != adv_test.send_len) return 1;
+        if(report->data[1] != HEAD_1) return 1;
 
         if(memcmp(adv_test.send, report->data, adv_test.send_len) == 0){
             adv_test.recv_cnt ++;
@@ -431,11 +471,11 @@ void adv_test_recv_non_conn_report(const le_ext_adv_report_t * report){
 
         // filter same.
         static uint8_t cache = 0;
-        if(cache == report->data[3]) return;
+        if(cache == report->data[3]) return 1;
         cache = report->data[3];
 
-        printf("master recv(cnt=%d)[%d]: ", adv_test.recv_cnt, report->data_len);
-        printf_hexdump(report->data, report->data_len);
+        printf("##master recv(cnt=%d)[%d]: ", adv_test.recv_cnt, report->data_len);
+        printf_hexdump(report->data, 4);//report->data_len);
 
         if(report->data[3] == adv_test.send[3]){
             adv_test.recv_ok = 1;
@@ -444,24 +484,26 @@ void adv_test_recv_non_conn_report(const le_ext_adv_report_t * report){
 
     // slave recv.
     if (adv_test.role == ADV_TEST_ROLE_SLAVE){
-        if(report->data_len != adv_test.send_len) return;
-        if(report->data[1] != HEAD_1) return;
+        if(report->data_len != adv_test.send_len) return 1;
+        if(report->data[1] != HEAD_1) return 1;
 
         adv_test.recv_cnt ++;
 
         // filter same.
         static uint8_t cache = 0;
-        if(cache == report->data[3]) return;
+        if(cache == report->data[3]) return 1;
         cache = report->data[3];
 
         // print
         printf("slave recv(cnt=%d)[%d]: ", adv_test.recv_cnt, report->data_len);
-        printf_hexdump(report->data, report->data_len);
+        printf_hexdump(report->data, 4);//report->data_len);
 
         // send rsp.
-        adv_bearer_send_test_pdu(HEAD_0, HEAD_1, (const uint8_t *)&report->data[2], report->data_len-2, adv_test.send_cnt, 100);
+        adv_bearer_send_test_pdu(HEAD_0, HEAD_1, (const uint8_t *)&report->data[2], report->data_len-2, adv_test.send_cnt, ADV_SLAVE_SEND_INTERVAL_MS);
         adv_test.recv_cnt = 0;
     }
+    
+    return 1;
 }
 #endif
 
