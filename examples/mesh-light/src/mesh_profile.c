@@ -211,7 +211,7 @@ void mesh_pb_adv_enable(int enabled){
 static void mesh_adv_bearer_send_non_conn_adv_start(void *data, uint16_t data_len){
     mesh_adv_bearer_send_non_conn_adv_start_t *adv_start = (mesh_adv_bearer_send_non_conn_adv_start_t *)data;
     platform_printf("\nnon_adv_start,%d,%dms\n", adv_start->count, adv_start->interval_ms);
-    if(adv_start->type == 0x2A){ // Mesh Message
+    if(adv_start->type == BLUETOOTH_DATA_TYPE_MESH_MESSAGE){ // Mesh Message
         mesh_mcas_on_off_server_control_callback(); //update conn interval.
     }
     // mesh_non_conn_adv_start_callback(); //stop scan.
