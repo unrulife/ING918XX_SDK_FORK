@@ -59,7 +59,41 @@ static void mesh_ble_params_reset_delay_timer_start(uint32_t timeout_in_ms){
 }
 #endif
 
+#if 1
+static void my_test_timer_start(uint32_t timeout_in_ms);
+static mesh_timer_source_t       my_test_timer;
+static uint32_t                  my_rtc_tick_ms;
+static uint32_t                  my_test_cnt = 0;
+static uint32_t                  my_min_duration = 1000;
+static void my_test_timer_timeout_handler(mesh_timer_source_t * ts){
+    uint32_t now = mesh_run_loop_get_time_ms();
+    if ( (now - my_rtc_tick_ms) < my_min_duration ){
+        my_min_duration = (now - my_rtc_tick_ms);
+    }
+    printf("__handler[%d], start: %dms, end: %dms, duration: %dms, min_dur:%dms\n", my_test_cnt++, my_rtc_tick_ms, now, (now - my_rtc_tick_ms), my_min_duration);
 
+    if(now - my_rtc_tick_ms < 30){
+        printf("start: %dms\n", my_rtc_tick_ms);
+        printf("end  : %dms\n", now);
+        printf("error duration: %dms\n", (now - my_rtc_tick_ms));
+        printf("min duration: %dms\n", my_min_duration);
+        return ;
+    }
+
+    my_test_timer_start(100);
+}
+
+static void my_test_timer_start(uint32_t timeout_in_ms){
+    mesh_run_loop_set_timer_handler(&my_test_timer, (mesh_func_timer_process)my_test_timer_timeout_handler);
+    mesh_run_loop_set_timer(&my_test_timer, timeout_in_ms);
+    mesh_run_loop_add_timer(&my_test_timer);
+    my_rtc_tick_ms = mesh_run_loop_get_time_ms();
+}
+
+void my_test_timer_init(void){
+    my_test_timer_start(3000);
+}
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /* Button msg dispatch */

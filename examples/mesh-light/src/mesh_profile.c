@@ -311,6 +311,8 @@ static void user_packet_handler(uint8_t packet_type, uint16_t channel, const uin
             break;
         app_log_debug("bt init ok.\n");
         mesh_stack_ready();
+        extern void my_test_timer_init(void);
+        my_test_timer_init();
         break;
 
     case HCI_EVENT_LE_META:
