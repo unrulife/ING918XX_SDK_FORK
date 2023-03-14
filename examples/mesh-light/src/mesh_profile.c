@@ -311,8 +311,8 @@ static void user_packet_handler(uint8_t packet_type, uint16_t channel, const uin
             break;
         app_log_debug("bt init ok.\n");
         mesh_stack_ready();
-        extern void my_test_timer_init(void);
-        my_test_timer_init();
+//        extern void my_test_timer_init(void);
+//        my_test_timer_init();
         break;
 
     case HCI_EVENT_LE_META:
@@ -373,6 +373,7 @@ static void user_packet_handler(uint8_t packet_type, uint16_t channel, const uin
                     const le_meta_event_adv_set_terminate_t *adv_term = 
                                         decode_hci_le_meta_event(packet, le_meta_event_adv_set_terminate_t);
                     if(MESH_PB_ADV_HANDLE == adv_term->adv_handle){
+                        // platform_trace_raw("1", 1);
                     }
                 }                  
                 break;

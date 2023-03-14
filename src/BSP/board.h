@@ -21,6 +21,14 @@
 extern "C" {
 #endif
 
+void toggle_indicate_led_a(void);
+void toggle_indicate_led_b(void);
+void toggle_TEST_GPO_12(void);
+void set_indicate_led_a(uint8_t en); //en=1, led on.
+void set_indicate_led_b(uint8_t en);
+void set_TEST_GPO_12(uint8_t en);
+void setup_indicate_led(void);
+
 /**
  ****************************************************************************************
  * @brief  Configure the initialization of rgb led and set the rgb value to (50,50,50).

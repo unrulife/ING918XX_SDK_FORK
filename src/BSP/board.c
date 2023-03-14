@@ -27,14 +27,28 @@
 #ifndef PIN_RGB_LED
 #if ((BOARD_ID == BOARD_ING91881B_02_02_04) || (BOARD_ID == BOARD_ING91881B_02_02_05) || (BOARD_ID == BOARD_ING91881B_02_02_06))
 #define PIN_RGB_LED   GIO_GPIO_0
+
 #elif (BOARD_ID == BOARD_DB682AC1A)
 #define PIN_RGB_LED   GIO_GPIO_6
 #endif
 #endif
 
+#ifndef PIN_TEST_LEDA // the right side one.
+#define PIN_TEST_LEDA   GIO_GPIO_11
+#endif
+
+#ifndef PIN_TEST_LEDB // the middle one
+#define PIN_TEST_LEDB   GIO_GPIO_10 
+#endif
+
+#ifndef PIN_TEST_GPO_12 // the DEVELOP BOARD.
+#define PIN_TEST_GPO_12   GIO_GPIO_12
+#endif
+
 //-------------------------------------------------RGB_LED drive sort-------------------------------------------------
 #ifdef BOARD_USE_RGB_LED
 
+#if(BOARD_ID == BOARD_ING91881B_02_02_05)
 // CPU clok: PLL_CLK_FREQ  48000000
 // 1 cycle = 21ns
 // 48 cycles per us
@@ -50,8 +64,6 @@ static void delay(int cycles)
         __NOP();
     }
 }
-
-#if(BOARD_ID == BOARD_ING91881B_02_02_05)
 
 static void tlc59731_write(uint32_t value)
 {
@@ -120,9 +132,11 @@ void set_rgb_led_color(uint8_t r, uint8_t g, uint8_t b)
 
 #elif (BOARD_ID == BOARD_ING9187_02_03_03)
 
+extern void mesh_on_off_led_callback(uint8_t on_off);
 void set_rgb_led_color(uint8_t r, uint8_t g, uint8_t b)
 {
     GIO_WriteValue(PIN_RGB_LED, (r>0)? 1:0);
+    mesh_on_off_led_callback((r>0)? 1:0);
 }
 
 #endif
@@ -149,6 +163,59 @@ void setup_rgb_led()
     #error unknown or unsupported board type
 #endif
    set_rgb_led_color(50, 50, 50);
+}
+
+void toggle_indicate_led_a(void)
+{
+    GIO_ToggleBits(1<<PIN_TEST_LEDA);//Through toggle interface to control gpio.
+//    if(GIO_ReadOutputValue(PIN_TEST_LEDA)){
+//        GIO_WriteValue(PIN_TEST_LEDA, 0);
+//        //printf("led a is on.\n");
+//    } else {
+//        GIO_WriteValue(PIN_TEST_LEDA, 1);
+//        //printf("led a is off.\n");
+//    }
+}
+
+void toggle_indicate_led_b(void)
+{
+    GIO_ToggleBits(1<<PIN_TEST_LEDB);//Through toggle interface to control gpio.
+}
+
+void toggle_TEST_GPO_12(void)
+{
+    GIO_ToggleBits(1<<PIN_TEST_GPO_12);//Through toggle interface to control gpio.
+}
+
+void set_indicate_led_a(uint8_t en)
+{
+    GIO_WriteValue(PIN_TEST_LEDA, en? 1:0);
+}
+
+void set_indicate_led_b(uint8_t en)
+{
+    GIO_WriteValue(PIN_TEST_LEDB, en? 1:0);
+}
+
+void set_TEST_GPO_12(uint8_t en)
+{
+    GIO_WriteValue(PIN_TEST_GPO_12, en? 1:0);
+}
+
+void setup_indicate_led(void)
+{
+#if (BOARD_ID == BOARD_ING9187_02_03_03)
+    SYSCTRL_ClearClkGateMulti((1 << SYSCTRL_ClkGate_APB_GPIO0));
+    PINCTRL_SetPadMux(PIN_TEST_LEDA, IO_SOURCE_GPIO);
+    PINCTRL_SetPadMux(PIN_TEST_LEDB, IO_SOURCE_GPIO);
+    PINCTRL_SetPadMux(PIN_TEST_GPO_12, IO_SOURCE_GPIO);
+    GIO_SetDirection(PIN_TEST_LEDA, GIO_DIR_OUTPUT);
+    GIO_SetDirection(PIN_TEST_LEDB, GIO_DIR_OUTPUT);
+    GIO_SetDirection(PIN_TEST_GPO_12, GIO_DIR_OUTPUT);
+    GIO_WriteValue(PIN_TEST_LEDA, 0);
+    GIO_WriteValue(PIN_TEST_LEDB, 0);
+    GIO_WriteValue(PIN_TEST_GPO_12, 0);
+#endif
 }
 
 #else

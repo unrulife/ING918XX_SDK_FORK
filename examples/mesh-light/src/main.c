@@ -7,6 +7,15 @@
 #include "mesh_profile.h"
 #include "app_config.h"
 #include "port_gen_os_driver.h"
+#include "uart_console.h"
+
+// #define TRACE_TO_UART
+
+#ifdef TRACE_TO_UART
+#define TRACE_PORT          APB_UART1
+#define TRACE_IO_TX         GIO_GPIO_8
+#define TRACE_BAUD          921600
+#endif
 
 #ifdef ENABLE_BUTTON_TEST
 #include "BUTTON_TEST.h"
@@ -15,9 +24,17 @@
 //-----------------------------------------------------
 // uart config
 #define PRINT_UART          APB_UART0
+
+#ifdef ENABLE_RF_TX_RX_TEST
+#include "RF_TEST.H"
+#define PRINT_UART_BAUD     115200
+#define USER_UART0_IO_TX    GIO_GPIO_17 //uart0 tx
+#define USER_UART0_IO_RX    GIO_GPIO_9  //uart0 rx
+#else
 #define PRINT_UART_BAUD     115200
 #define USER_UART0_IO_TX    GIO_GPIO_2 //uart0 tx
 #define USER_UART0_IO_RX    GIO_GPIO_3 //uart0 rx
+#endif
 //-----------------------------------------------------
 
 
@@ -89,7 +106,12 @@ void config_uart(uint32_t freq, uint32_t baud)
     UART_0.ClockFrequency    = freq;
     UART_0.BaudRate          = baud;
 
-    apUART_Initialize(PRINT_UART, &UART_0, 0);
+    apUART_Initialize(PRINT_UART, &UART_0, 1 << bsUART_RECEIVE_INTENAB);
+    
+#ifdef TRACE_TO_UART
+    UART_0.BaudRate          = TRACE_BAUD;
+    apUART_Initialize(TRACE_PORT, &UART_0, 1 << bsUART_TRANSMIT_INTENAB);
+#endif
 }
 
 #include "../../peripheral_led/src/impl_led.c"
@@ -97,16 +119,92 @@ void config_uart(uint32_t freq, uint32_t baud)
 void setup_peripherals(void)
 {
     uart_gpio_init();
+#ifdef TRACE_TO_UART
+    SYSCTRL_ClearClkGateMulti((1 << SYSCTRL_ClkGate_APB_UART1)
+                            | (1 << SYSCTRL_ClkGate_APB_PinCtrl));
+    PINCTRL_SetPadMux(TRACE_IO_TX, IO_SOURCE_UART1_TXD);
+#endif
     config_uart(OSC_CLK_FREQ, PRINT_UART_BAUD);
     
     setup_rgb_led();
+    setup_indicate_led();
 
 #ifdef ENABLE_BUTTON_TEST
     button_test_init();
 #endif
+    
+#ifdef ENABLE_RF_TX_RX_TEST
+    IngRfTest_init();
+#endif
 }
 
+static uint32_t uart_isr(void *user_data)
+{
+    uint32_t status;
+
+    while(1)
+    {
+        status = apUART_Get_all_raw_int_stat(PRINT_UART);
+        if (status == 0)
+            break;
+
+        PRINT_UART->IntClear = status;
+
+        // rx int
+        if (status & (1 << bsUART_RECEIVE_INTENAB))
+        {
+            while (apUART_Check_RXFIFO_EMPTY(PRINT_UART) != 1)
+            {
+                char c = PRINT_UART->DataRead;
+                console_rx_data(&c, 1);
+            }
+        }
+    }
+    return 0;
+}
+
+#ifdef TRACE_TO_UART
+trace_uart_t trace_ctx = {.port = TRACE_PORT, .write_next = 0, .read_next = 0};
+
+uint32_t uart_trace_get_free_size(uint16_t *read_pos, uint16_t *write_pos, uint32_t *tt_add_cnt, uint32_t *max_single_cnt){
+
+    trace_uart_t *ctx = &trace_ctx;
+    int32_t free_size;
+    free_size = ctx->read_next - ctx->write_next;
+    if (free_size <= 0) free_size += TRACE_BUFF_SIZE; //uart
+    if (free_size > 0) free_size--;
+    if(read_pos)
+        *read_pos = ctx->read_next;
+    if(write_pos)
+        *write_pos = ctx->write_next;
+    if(tt_add_cnt)
+        *tt_add_cnt = 0;
+    if(max_single_cnt)
+        *max_single_cnt = 0;
+
+    return free_size;
+}
+#else
 trace_rtt_t trace_ctx = {0};
+
+uint32_t uart_trace_get_free_size(uint16_t *read_pos, uint16_t *write_pos, uint32_t *tt_add_cnt, uint32_t *max_single_cnt){
+
+    uint32_t free_size;
+    free_size = SEGGER_RTT_GetAvailWriteSpace(0);
+    if(read_pos)
+        *read_pos = 0;
+    if(write_pos)
+        *write_pos = 0;
+    if(tt_add_cnt)
+        *tt_add_cnt = 0;
+    if(max_single_cnt)
+        *max_single_cnt = 0;
+
+    return free_size;
+}
+
+#endif
+
 int app_main()
 {
     // If there are *three* crystals on board, *uncomment* below line.
@@ -121,11 +219,28 @@ int app_main()
     platform_set_evt_callback(PLATFORM_CB_EVT_PUTC, (f_platform_evt_cb)cb_putc, NULL);
 
     platform_set_evt_callback(PLATFORM_CB_EVT_PROFILE_INIT, setup_profile, NULL);
-
+    
+#ifdef TRACE_TO_UART
+    trace_uart_init(&trace_ctx);
+    platform_set_irq_callback(PLATFORM_CB_IRQ_UART1, (f_platform_irq_cb)trace_uart_isr, &trace_ctx);
+    platform_set_evt_callback(PLATFORM_CB_EVT_TRACE, (f_platform_evt_cb)cb_trace_uart, &trace_ctx);
+#else
     trace_rtt_init(&trace_ctx);
     platform_set_evt_callback(PLATFORM_CB_EVT_TRACE, (f_platform_evt_cb)cb_trace_rtt, &trace_ctx);
-    platform_config(PLATFORM_CFG_TRACE_MASK, 0);
+#endif
 
+#ifdef TRACE_TO_UART
+    // platform_config(PLATFORM_CFG_TRACE_MASK, 0xff - (1 << PLATFORM_TRACE_ID_HCI_EVENT));
+    platform_config(PLATFORM_CFG_TRACE_MASK, 0x00);
+#else
+    // platform_config(PLATFORM_CFG_TRACE_MASK, \
+    //                 0xff - \
+    //                 (1 << PLATFORM_TRACE_ID_HCI_EVENT) - \
+    //                 (1 << PLATFORM_TRACE_ID_HCI_CMD));
+    platform_config(PLATFORM_CFG_TRACE_MASK, 0x00);
+#endif
+    platform_set_irq_callback(PLATFORM_CB_IRQ_UART0, uart_isr, NULL);
+    cmd_help(NULL);
     return (int)os_impl_get_driver();
 }
 
