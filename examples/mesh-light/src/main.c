@@ -9,7 +9,7 @@
 #include "port_gen_os_driver.h"
 #include "uart_console.h"
 
-// #define TRACE_TO_UART
+#define TRACE_TO_UART
 
 #ifdef TRACE_TO_UART
 #define TRACE_PORT          APB_UART1
@@ -205,6 +205,17 @@ uint32_t uart_trace_get_free_size(uint16_t *read_pos, uint16_t *write_pos, uint3
 
 #endif
 
+static uint32_t profile_init(void *data, void *user_data){
+#ifdef TRACE_TO_UART
+    trace_uart_init(&trace_ctx);
+    platform_set_irq_callback(PLATFORM_CB_IRQ_UART1, (f_platform_irq_cb)trace_uart_isr, &trace_ctx);
+    platform_set_evt_callback(PLATFORM_CB_EVT_TRACE, (f_platform_evt_cb)cb_trace_uart, &trace_ctx);
+    platform_config(PLATFORM_CFG_TRACE_MASK, 0xff - (1 << PLATFORM_TRACE_ID_HCI_EVENT));
+//    platform_config(PLATFORM_CFG_TRACE_MASK, 0x00);
+#endif
+    return setup_profile(data, user_data);
+}
+
 int app_main()
 {
     // If there are *three* crystals on board, *uncomment* below line.
@@ -218,20 +229,15 @@ int app_main()
     platform_set_evt_callback(PLATFORM_CB_EVT_ASSERTION, (f_platform_evt_cb)cb_assertion, NULL);
     platform_set_evt_callback(PLATFORM_CB_EVT_PUTC, (f_platform_evt_cb)cb_putc, NULL);
 
-    platform_set_evt_callback(PLATFORM_CB_EVT_PROFILE_INIT, setup_profile, NULL);
+    platform_set_evt_callback(PLATFORM_CB_EVT_PROFILE_INIT, profile_init, NULL);
     
 #ifdef TRACE_TO_UART
-    trace_uart_init(&trace_ctx);
-    platform_set_irq_callback(PLATFORM_CB_IRQ_UART1, (f_platform_irq_cb)trace_uart_isr, &trace_ctx);
-    platform_set_evt_callback(PLATFORM_CB_EVT_TRACE, (f_platform_evt_cb)cb_trace_uart, &trace_ctx);
 #else
     trace_rtt_init(&trace_ctx);
     platform_set_evt_callback(PLATFORM_CB_EVT_TRACE, (f_platform_evt_cb)cb_trace_rtt, &trace_ctx);
 #endif
 
 #ifdef TRACE_TO_UART
-    // platform_config(PLATFORM_CFG_TRACE_MASK, 0xff - (1 << PLATFORM_TRACE_ID_HCI_EVENT));
-    platform_config(PLATFORM_CFG_TRACE_MASK, 0x00);
 #else
     // platform_config(PLATFORM_CFG_TRACE_MASK, \
     //                 0xff - \
