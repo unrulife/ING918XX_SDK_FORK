@@ -35,7 +35,7 @@
  "coding_adv": false,
  "key_incode": true,
  "series": "ING9187xx",
- "proj_name": "LIN",
+ "proj_name": "LIN_SLV",
  "sdk_release_path": "..\/..",
  "printf_port": "uart0",
  "security": false,
