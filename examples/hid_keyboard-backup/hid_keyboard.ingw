@@ -2,23 +2,23 @@
  "watchdog": false,
  "bundle_meta": {
   "rom": {
-   "size": 155260,
-   "base": 33562624
+   "size": 135744,
+   "base": 16384
   },
   "ram": {
-   "size": 21580,
+   "size": 29876,
    "base": 536870912
   },
   "app": {
-   "base": 33718272
+   "base": 155648
   },
   "version": [
-   2,3,0]
+   1,9,40]
  },
- "tc_dir": "D:\/001-LZK-SETUP\/KEIL536\/uv4",
+ "tc_dir": "C:\\Keil_v5\\UV4",
  "eflash_addr": "0x42000",
  "ide_ver": "5",
- "ide_exe": "D:\/001-LZK-SETUP\/KEIL536\/uv4\/uv4.exe",
+ "ide_exe": "C:\\Keil_v5\\UV4\\UV4.exe",
  "ota": false,
  "ide": "keil",
  "git": false,
@@ -28,7 +28,7 @@
  "ota_ver_minor": "0",
  "ota_ver_major": "0",
  "template": "C:\\projects\\ingWizard\\templates\\typical\\peripheral",
- "series": "ING9168xx",
+ "series": "ING9187xx",
  "proj_name": "hid_keyboard",
  "sdk_release_path": "..\/..",
  "security": true,
@@ -40,12 +40,12 @@
  "pb_adv": true,
  "pb_gatt": true,
  "deep_sleep": true,
- "proj_dir": "D:\/002-GITHUB\/ING918XX_SDK_FORK\/examples\\hid_keyboard",
+ "proj_dir": "C:\/projects\/ingchips\/SDK_Release\/examples\\hid_keyboard",
  "power_saving": false,
  "bundle": "typical",
- "app_rom_size": "360448",
- "app_rom_addr": "33718272",
- "family": "ing916",
+ "app_rom_size": "385024",
+ "app_rom_addr": "155648",
+ "family": "ing918",
  "vcode": false,
  "io_cap": "IO_CAPABILITY_NO_INPUT_NO_OUTPUT",
  "role": "peripheral",
@@ -57,8 +57,8 @@
  },
  "keil": true,
  "cmsis": "",
- "app_ram_size": 11184,
- "app_ram_addr": 536892496,
+ "app_ram_size": 35656,
+ "app_ram_addr": 536900792,
  "uart_log": true,
  "ota_ver_patch": "0",
  "profile_data": "0, 0\r\n",

@@ -16,8 +16,6 @@
 #include "platform_api.h"
 #include "port_gen_os_driver.h"
 
-#define USE_KEY_REMAP_FOR_PAIR  (1)
-
 #if (INGCHIPS_FAMILY == INGCHIPS_FAMILY_918)
 #define DB_FLASH_ADDRESS  0x42000
 #elif (INGCHIPS_FAMILY == INGCHIPS_FAMILY_916)
@@ -58,56 +56,6 @@ struct kv_cache_item
 struct kv_cache_item  kv_cache[KV_CACHE_SIZE] = {0};
 
 static uint32_t kv_storage_tail = 0;
-
-#if USE_KEY_REMAP_FOR_PAIR
-
-typedef enum {
-    KEY_REMAP_TYPE_PUT = 0,
-    KEY_REMAP_TYPE_REMOVE,
-    KEY_REMAP_TYPE_GET,
-    KEY_REMAP_TYPE_VISIT,
-    KEY_REMAP_TYPE_MODIFY,
-} kv_remap_type_t;
-
-extern kvkey_t test_channel;
-
-#define TEST_CHANNEL_KEY    test_channel
-
-
-static kvkey_t key_remap_by_type(kv_remap_type_t type, kvkey_t key){
-    kvkey_t new_key = key;
-    switch(type)
-    {
-        case KEY_REMAP_TYPE_PUT:
-            if(key >= 0x01 && key <= 0x05){
-                new_key = TEST_CHANNEL_KEY;
-            }
-            break;
-        case KEY_REMAP_TYPE_REMOVE:
-            if(key >= 0x01 && key <= 0x05){
-                new_key = TEST_CHANNEL_KEY;
-            }
-            break;
-        case KEY_REMAP_TYPE_GET:
-            if(key == 0x01){
-                new_key = TEST_CHANNEL_KEY;
-            }
-            break;
-        case KEY_REMAP_TYPE_VISIT:
-            if(key == 0x01){
-                new_key = TEST_CHANNEL_KEY;
-            }
-            break;
-        case KEY_REMAP_TYPE_MODIFY:
-            if(key == 0x01){
-                new_key = TEST_CHANNEL_KEY;
-            }
-            break;
-    }    
-    return new_key;
-}
-
-#endif
 
 static uint32_t next_item(const struct kv_item *item)
 {
@@ -161,7 +109,6 @@ static void kv_do_backup(uint32_t from, uint32_t to)
 
 static void kv_reset(void)
 {
-    platform_printf("[KV]%s\n", __func__);
 #if (INGCHIPS_FAMILY == INGCHIPS_FAMILY_918)
     erase_flash_page(DB_FLASH_ADDRESS);
 #elif (INGCHIPS_FAMILY == INGCHIPS_FAMILY_916)
@@ -172,7 +119,6 @@ static void kv_reset(void)
 
 static void impl_kv_remove_all(void)
 {
-    platform_printf("[KV]%s\n", __func__);
     int i;
     for (i = 0; i < KV_CACHE_SIZE; i++)
     {
@@ -226,36 +172,6 @@ static struct kv_cache_item *kv_search_cache(const kvkey_t key)
 
 static void impl_do_kv_visit(f_kv_visitor visitor, void *user_data, uint32_t start, uint32_t end)
 {
-#if USE_KEY_REMAP_FOR_PAIR
-    int k;
-    for (k = 0; k <= (KV_USER_KEY_END-1); k++)
-    {
-        kvkey_t new_key = key_remap_by_type(KEY_REMAP_TYPE_VISIT, (kvkey_t)k); 
-        // host 永远visit不到0x01的key，即认为0x01一直不存在，所以host存储时永远使用0x01进行存储；
-        // host 回连的时候采用的是遍历1~5这几个key的内容是否存在，以及是否可解析/地址是否匹配等来进行回连的，并不采用visit，所以不会引起回连问题；
-        // 所以，目前这种方案可以很好的解决多通道问题，但前提是host的运行机制保持以上两个机制不更改，否则需要重新适配；
-        // 吉哥说以上机制应该不会变更，所以，采用此方案，应该可以比较巧妙的解决了存储只存储0x01却不会引起回连问题。
-
-        struct kv_cache_item * r = kv_search_cache(new_key);
-        if (r)
-        {
-            platform_printf("[KV]cache, ori_key:%d, new_key:%d\n", k, new_key);
-            if (visitor(r->key, r->data, r->len, user_data) != KV_OK)
-                break;
-        }
-        else
-        {
-            struct kv_item *item = kv_search_flash(new_key, start, end);
-            if (item){
-                platform_printf("[KV]flash, ori_key:%d, new_key:%d\n", k, new_key);
-                if (visitor(item->key, item->data, item->len, user_data) != KV_OK)
-                    break;
-            }
-                
-        }
-    }
-
-#else
     int k;
     for (k = 0; k <= KV_USER_KEY_END; k++)
     {
@@ -273,12 +189,10 @@ static void impl_do_kv_visit(f_kv_visitor visitor, void *user_data, uint32_t sta
                     break;
         }
     }
-#endif
 }
 
 static void impl_kv_visit(f_kv_visitor visitor, void *user_data)
 {
-    platform_printf("[KV]%s\n", __func__);
     impl_do_kv_visit(visitor, user_data, DB_FLASH_ADDRESS, DB_FLASH_ADDR_END);
 }
 
@@ -362,25 +276,6 @@ static void kv_do_remove_key(const kvkey_t key)
 
 static void impl_kv_remove(const kvkey_t key)
 {
-#if USE_KEY_REMAP_FOR_PAIR
-    kvkey_t new_key = key_remap_by_type(KEY_REMAP_TYPE_REMOVE, (kvkey_t)key);
-    platform_printf("[KV] REMOVE: key=%d,new_key=%d\n", key, new_key);
-
-    struct kv_cache_item * r = kv_search_cache(new_key);
-    if (r)
-    {
-        GEN_OS->free(r->data);
-        r->data = 0;
-        r->key = (kvkey_t)-1;
-        kv_do_remove_key(new_key);
-        return;
-    }
-
-    struct kv_item *item = kv_search_flash(new_key, DB_FLASH_ADDRESS, DB_FLASH_ADDR_END);
-    if (item)
-        kv_do_remove_key(new_key);
-#else
-    platform_printf("[KV]%s,key=%d\n", __func__, key);
     struct kv_cache_item * r = kv_search_cache(key);
     if (r)
     {
@@ -394,26 +289,10 @@ static void impl_kv_remove(const kvkey_t key)
     struct kv_item *item = kv_search_flash(key, DB_FLASH_ADDRESS, DB_FLASH_ADDR_END);
     if (item)
         kv_do_remove_key(key);
-#endif
-    
 }
 
 static int impl_kv_put(const kvkey_t key, const uint8_t *data, int16_t len)
 {
-#if USE_KEY_REMAP_FOR_PAIR
-    kvkey_t new_key = key_remap_by_type(KEY_REMAP_TYPE_PUT, (kvkey_t)key);
-    platform_printf("[KV] PUT: key=%d,new_key=%d\n", key, new_key);
-    struct kv_cache_item *item = kv_search(new_key);
-    if (item)
-    {
-        GEN_OS->free(item->data);
-        item->data = NULL;
-        item->key = (kvkey_t)-1;
-    }
-
-    return kv_do_append_key(new_key, data, len);
-#else
-    platform_printf("[KV]%s,key=%d\n", __func__, key);
     struct kv_cache_item *item = kv_search(key);
     if (item)
     {
@@ -423,26 +302,10 @@ static int impl_kv_put(const kvkey_t key, const uint8_t *data, int16_t len)
     }
 
     return kv_do_append_key(key, data, len);
-#endif
 }
 
 static uint8_t *impl_kv_get(const kvkey_t key, int16_t *len)
 {
-#if USE_KEY_REMAP_FOR_PAIR
-    kvkey_t new_key = key_remap_by_type(KEY_REMAP_TYPE_GET, (kvkey_t)key);
-    if(key != 0)
-        platform_printf("[KV] GET: key=%d,new_key=%d\n", key, new_key);
-
-    struct kv_cache_item *item = kv_search(new_key);
-    if (item)
-    {
-        if (len) *len = item->len;
-        return item->data;
-    }
-    return NULL;
-#else
-    if(key != 0)
-        platform_printf("[KV]%s,key=%d\n", __func__, key);
     struct kv_cache_item *item = kv_search(key);
     if (item)
     {
@@ -450,24 +313,13 @@ static uint8_t *impl_kv_get(const kvkey_t key, int16_t *len)
         return item->data;
     }
     return NULL;
-#endif
 }
 
 static void impl_kv_value_modified_of_key(kvkey_t key)
 {
-#if USE_KEY_REMAP_FOR_PAIR
-    kvkey_t new_key = key_remap_by_type(KEY_REMAP_TYPE_MODIFY, (kvkey_t)key);
-    platform_printf("[KV] MODIFY: key=%d,new_key=%d\n", key, new_key);
-
-    struct kv_cache_item * r = kv_search_cache(new_key);
-    if (r)
-        kv_do_append_key(new_key, r->data, r->len);
-#else
-    platform_printf("[KV]%s,key=%d\n", __func__, key);
     struct kv_cache_item * r = kv_search_cache(key);
     if (r)
         kv_do_append_key(key, r->data, r->len);
-#endif
 }
 
 static const kv_backend_t kv_backend =
@@ -482,7 +334,6 @@ static const kv_backend_t kv_backend =
 
 void kv_impl_init(void)
 {
-    platform_printf("[KV]%s\n", __func__);
     int r = kv_flash_repair(DB_FLASH_ADDRESS, DB_FLASH_ADDR_END);
     if (r)
     {

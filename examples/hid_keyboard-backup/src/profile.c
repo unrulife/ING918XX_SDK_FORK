@@ -22,17 +22,6 @@
 
 #include "profile.h"
 
-extern void all_kv_dump(void);
-extern void app_storage_remove_all(void);
-
-
-enum{
-    BLE_STATE_IDLE,
-    BLE_STATE_ADV,
-    BLE_STATE_CONNECTED,
-};
-static uint8_t ble_state = BLE_STATE_IDLE;
-
 enum
 {
     KV_USER_PEER_OS = KV_USER_KEY_START,
@@ -60,12 +49,12 @@ const static char os_names[OS_TYPE_NUM][10] = {
     [OS_TYPE_Android]   = "Android",
 };
 
-sm_persistent_t sm_persistent =
+const sm_persistent_t sm_persistent =
 {
     .er = {1, 2, 3},
     .ir = {4, 5, 6},
     .identity_addr_type     = BD_ADDR_TYPE_LE_RANDOM,
-    .identity_addr          = {0xC3, 0x82, 0x63, 0xc4, 0x36, 0x88}
+    .identity_addr          = {0xC3, 0x82, 0x63, 0xc4, 0x35, 0x7b}
 };
 
 const static uint8_t adv_data[] = {
@@ -294,8 +283,8 @@ kb_report_t report =
 
 void kb_state_changed(uint16_t key_state)
 {
-    // if(handle_send != INVALID_HANDLE)
-    //     btstack_push_user_msg(USER_MSG_ID_INPUT_HW_KEYS, NULL, key_state);
+    if(handle_send != INVALID_HANDLE)
+        btstack_push_user_msg(USER_MSG_ID_INPUT_HW_KEYS, NULL, key_state);
 }
 
 void kb_input_char(char c)
@@ -305,15 +294,15 @@ void kb_input_char(char c)
 
 void kb_send_report(void)
 {
-    // if (protocol_mode != HID_PROTO_REPORT)
-    //     return;
+    if (protocol_mode != HID_PROTO_REPORT)
+        return;
 
-    // if (handle_send == INVALID_HANDLE)
-    //     return;
-    // if (0 == att_handle_notify)
-    //     return;
+    if (handle_send == INVALID_HANDLE)
+        return;
+    if (0 == att_handle_notify)
+        return;
 
-    // att_server_notify(handle_send, att_handle_notify, (uint8_t*)&report, sizeof(report));
+    att_server_notify(handle_send, att_handle_notify, (uint8_t*)&report, sizeof(report));
 }
 
 struct
@@ -370,18 +359,6 @@ struct
     [0x7f] = { .code = KEY_BACKSPACE },
 };
 
-static void setup_adv(void);
-
-//===========================================
-// #define PAIR_ADV        0
-// #define RECONN_ADV      1
-// static uint8_t my_adv_type = PAIR_ADV;
-// static uint8_t device_idx = 0;
-static uint8_t reconn_addr[3] = {0x00, 0x00, 0x00};
-static uint8_t pair_addr_pool = 0x01;
-kvkey_t test_channel = 205;
-//===========================================
-
 static void user_msg_handler(uint32_t msg_id, void *data, uint16_t size)
 {
     switch (msg_id)
@@ -409,156 +386,52 @@ static void user_msg_handler(uint32_t msg_id, void *data, uint16_t size)
         kb_send_report();
         break;
     case USER_MSG_ID_INPUT_ASCII:
+        if (input_number.flag)
         {
             char c = (char)size;
-            if (c == '.')
+            if (('0' <= c) && (c <= '9'))
             {
-                app_storage_remove_all();
-                break;
-            }
-            if (c == 'a') // pair 1
-            {
-                reconn_addr[0] = 0;
-                break;
-            }
-            if (c == 'b') // pair 2
-            {
-                reconn_addr[1] = 0;
-                break;
-            }
-            if (c == 'c') // pair 3
-            {
-                reconn_addr[2] = 0;
-                break;
-            }
-            if (c == '1') // channel 1
-            {
-                if(reconn_addr[0]){ 
-                    //reconn adv.
-                    platform_printf("reconn 1\n");
-                    sm_persistent.identity_addr[5] = reconn_addr[0];
-                } else { 
-                    // pair adv
-                    platform_printf("pair 1\n");
-                    pair_addr_pool++;
-                    sm_persistent.identity_addr[5] = pair_addr_pool;
-                    reconn_addr[0] = pair_addr_pool;
-                }
+                input_number.value[input_number.cnt++] = c;
+                if (input_number.cnt >= sizeof(input_number.value))
+                {
+                    input_number.flag = 0;
 
-                test_channel = 205;
-                if (ble_state == BLE_STATE_CONNECTED) {
-                    gap_disconnect_all();
-                } else if (ble_state == BLE_STATE_ADV){
-                    setup_adv();
+                    int a = atoi(input_number.value);
+                    if (handle_send != INVALID_HANDLE)
+                        sm_passkey_input(handle_send, a);
                 }
-                break;
-            }
-            if (c == '2') // channel 2
-            {
-                if(reconn_addr[1]){ 
-                    //reconn adv.
-                    platform_printf("reconn 1\n");
-                    sm_persistent.identity_addr[5] = reconn_addr[1];
-                } else { 
-                    // pair adv
-                    platform_printf("pair 1\n");
-                    pair_addr_pool++;
-                    sm_persistent.identity_addr[5] = pair_addr_pool;
-                    reconn_addr[1] = pair_addr_pool;
-                }
-
-                test_channel = 206;
-                if (ble_state == BLE_STATE_CONNECTED) {
-                    gap_disconnect_all();
-                } else if (ble_state == BLE_STATE_ADV){
-                    setup_adv();
-                }
-                break;
-            }
-            if (c == '3') // channel 3
-            {
-                if(reconn_addr[2]){ 
-                    //reconn adv.
-                    platform_printf("reconn 1\n");
-                    sm_persistent.identity_addr[5] = reconn_addr[2];
-                } else { 
-                    // pair adv
-                    platform_printf("pair 1\n");
-                    pair_addr_pool++;
-                    sm_persistent.identity_addr[5] = pair_addr_pool;
-                    reconn_addr[2] = pair_addr_pool;
-                }
-
-                test_channel = 207;
-                if (ble_state == BLE_STATE_CONNECTED) {
-                    gap_disconnect_all();
-                } else if (ble_state == BLE_STATE_ADV){
-                    setup_adv();
-                }
-                break;
             }
         }
-
-        // if (input_number.flag)
-        // {
-        //     char c = (char)size;
-        //     if (('0' <= c) && (c <= '9'))
-        //     {
-        //         input_number.value[input_number.cnt++] = c;
-        //         if (input_number.cnt >= sizeof(input_number.value))
-        //         {
-        //             input_number.flag = 0;
-
-        //             int a = atoi(input_number.value);
-        //             if (handle_send != INVALID_HANDLE)
-        //                 sm_passkey_input(handle_send, a);
-        //         }
-        //     }
-        // }
-        // else
-        // {
-        //     char c = (char)size;
-        //     if (c == '.')
-        //     {
-        //         my_adv_type = PAIR_ADV;
-        //         device_idx ^= 1;
-        //         gap_disconnect_all();
-        //         break;
-        //     }
-
-        //     if (c == ',')
-        //     {
-        //         my_adv_type = RECONN_ADV;
-        //         gap_disconnect_all();
-        //     }
-            
-        //     report.modifier = 0;
-        //     memset(report.codes, 0, sizeof(report.codes));
-        //     if (('a' <= c) && (c <= 'z'))
-        //     {
-        //         report.codes[0] = c - 'a' + KEY_A;
-        //     }
-        //     else if (('1' <= c) && (c <= '9'))
-        //     {
-        //         report.codes[0] = c - '1' + KEY_1;
-        //     }
-        //     else if (('A' <= c) && (c <= 'Z'))
-        //     {
-        //         report.modifier = KEY_MOD_LSHIFT;
-        //         report.codes[0] = c - 'A' + KEY_A;
-        //     }
-        //     else
-        //     {
-        //         report.modifier = ascii_to_usb[c].modifier;
-        //         report.codes[0] = ascii_to_usb[c].code;
-        //         if (report.codes[0] == 0)
-        //             break;
-        //     }
-        //     kb_send_report();
-        //     report.modifier = 0;
-        //     report.codes[0] = 0;
-        //     kb_send_report();
-        // }
+        else
+        {
+            char c = (char)size;
+            report.modifier = 0;
+            memset(report.codes, 0, sizeof(report.codes));
+            if (('a' <= c) && (c <= 'z'))
+            {
+                report.codes[0] = c - 'a' + KEY_A;
+            }
+            else if (('1' <= c) && (c <= '9'))
+            {
+                report.codes[0] = c - '1' + KEY_1;
+            }
+            else if (('A' <= c) && (c <= 'Z'))
+            {
+                report.modifier = KEY_MOD_LSHIFT;
+                report.codes[0] = c - 'A' + KEY_A;
+            }
+            else
+            {
+                report.modifier = ascii_to_usb[c].modifier;
+                report.codes[0] = ascii_to_usb[c].code;
+                if (report.codes[0] == 0)
+                    break;
+            }
+            kb_send_report();
+            report.modifier = 0;
+            report.codes[0] = 0;
+            kb_send_report();
+        }
         break;
     }
 }
@@ -567,65 +440,9 @@ uint8_t *init_service(void);
 
 static struct btstack_synced_runner *synced_runner = NULL;
 
-const static ext_adv_set_en_t adv_sets_en[] = {{.handle = 0, .duration = 0, .max_events = 0}};
-
-//===========================================
-// #define PAIR_ADV        0
-// #define RECONN_ADV      1
-// static uint8_t my_adv_type = PAIR_ADV;
-// static uint8_t device_idx = 0;
-
-// static uint8_t reconn_addr[2] = {0x00, 0x00};
-// static uint8_t pair_addr_pool = 0x01;
-
-//===========================================
-
-static void setup_adv(void)
-{
-//===========================================
-    // if (my_adv_type == PAIR_ADV){
-    //     pair_addr_pool++;
-    //     sm_persistent.identity_addr[5] = pair_addr_pool;
-    //     reconn_addr[device_idx] = pair_addr_pool;
-    //     platform_printf("pair[%d], ", device_idx);
-    // }
-
-    // if (my_adv_type == RECONN_ADV){
-    //     device_idx ^= 1;
-    //     sm_persistent.identity_addr[5] = reconn_addr[device_idx];
-    //     platform_printf("reconn[%d], ", device_idx);
-    // }
-//===========================================
-
-    // *(int32_t *)(sm_persistent.identity_addr + 1) = (int32_t)platform_rand();
-    platform_printf("adv Addr: "); printf_hexdump(sm_persistent.identity_addr, sizeof(sm_persistent.identity_addr));
-    
-    gap_set_ext_adv_enable(0, sizeof(adv_sets_en) / sizeof(adv_sets_en[0]), adv_sets_en);
-    
-    if (BD_ADDR_TYPE_LE_RANDOM ==  sm_persistent.identity_addr_type)
-        gap_set_adv_set_random_addr(0, sm_persistent.identity_addr);
-    gap_set_ext_adv_para(0,
-                            CONNECTABLE_ADV_BIT | SCANNABLE_ADV_BIT | LEGACY_PDU_BIT,
-                            0x0030, 0x0030,            // Primary_Advertising_Interval_Min, Primary_Advertising_Interval_Max
-                            PRIMARY_ADV_ALL_CHANNELS,  // Primary_Advertising_Channel_Map
-                            sm_persistent.identity_addr_type,    // Own_Address_Type
-                            BD_ADDR_TYPE_LE_PUBLIC,    // Peer_Address_Type (ignore)
-                            NULL,                      // Peer_Address      (ignore)
-                            ADV_FILTER_ALLOW_ALL,      // Advertising_Filter_Policy
-                            0x00,                      // Advertising_Tx_Power
-                            PHY_1M,                    // Primary_Advertising_PHY
-                            0,                         // Secondary_Advertising_Max_Skip
-                            PHY_1M,                    // Secondary_Advertising_PHY
-                            0x00,                      // Advertising_SID
-                            0x00);                     // Scan_Request_Notification_Enable
-    gap_set_ext_adv_data(0, sizeof(adv_data), (uint8_t*)adv_data);
-    gap_set_ext_scan_response_data(0, sizeof(scan_data), (uint8_t*)scan_data);
-    gap_set_ext_adv_enable(1, sizeof(adv_sets_en) / sizeof(adv_sets_en[0]), adv_sets_en);
-    ble_state = BLE_STATE_ADV;
-}
-
 static void user_packet_handler(uint8_t packet_type, uint16_t channel, const uint8_t *packet, uint16_t size)
 {
+    const static ext_adv_set_en_t adv_sets_en[] = {{.handle = 0, .duration = 0, .max_events = 0}};
     uint8_t event = hci_event_packet_get_type(packet);
     const btstack_user_msg_t *p_user_msg;
     if (packet_type != HCI_EVENT_PACKET) return;
@@ -636,9 +453,27 @@ static void user_packet_handler(uint8_t packet_type, uint16_t channel, const uin
         if (btstack_event_state_get_state(packet) != HCI_STATE_WORKING)
             break;
 
-        // synced_runner = btstack_create_sync_runner(0);
+        synced_runner = btstack_create_sync_runner(0);
 
-        setup_adv();
+        if (BD_ADDR_TYPE_LE_RANDOM ==  sm_persistent.identity_addr_type)
+            gap_set_adv_set_random_addr(0, sm_persistent.identity_addr);
+        gap_set_ext_adv_para(0,
+                                CONNECTABLE_ADV_BIT | SCANNABLE_ADV_BIT | LEGACY_PDU_BIT,
+                                0x00a1, 0x00a1,            // Primary_Advertising_Interval_Min, Primary_Advertising_Interval_Max
+                                PRIMARY_ADV_ALL_CHANNELS,  // Primary_Advertising_Channel_Map
+                                sm_persistent.identity_addr_type,    // Own_Address_Type
+                                BD_ADDR_TYPE_LE_PUBLIC,    // Peer_Address_Type (ignore)
+                                NULL,                      // Peer_Address      (ignore)
+                                ADV_FILTER_ALLOW_ALL,      // Advertising_Filter_Policy
+                                0x00,                      // Advertising_Tx_Power
+                                PHY_1M,                    // Primary_Advertising_PHY
+                                0,                         // Secondary_Advertising_Max_Skip
+                                PHY_1M,                    // Secondary_Advertising_PHY
+                                0x00,                      // Advertising_SID
+                                0x00);                     // Scan_Request_Notification_Enable
+        gap_set_ext_adv_data(0, sizeof(adv_data), (uint8_t*)adv_data);
+        gap_set_ext_scan_response_data(0, sizeof(scan_data), (uint8_t*)scan_data);
+        gap_set_ext_adv_enable(1, sizeof(adv_sets_en) / sizeof(adv_sets_en[0]), adv_sets_en);
         break;
 
     case HCI_EVENT_LE_META:
@@ -647,7 +482,6 @@ static void user_packet_handler(uint8_t packet_type, uint16_t channel, const uin
         case HCI_SUBEVENT_LE_ENHANCED_CONNECTION_COMPLETE:
             att_set_db(decode_hci_le_meta_event(packet, le_meta_event_enh_create_conn_complete_t)->handle, att_db_util_get_address());
             handle_send = decode_hci_le_meta_event(packet, le_meta_event_enh_create_conn_complete_t)->handle;
-            ble_state = BLE_STATE_CONNECTED;
             break;
         default:
             break;
@@ -656,10 +490,9 @@ static void user_packet_handler(uint8_t packet_type, uint16_t channel, const uin
         break;
 
     case HCI_EVENT_DISCONNECTION_COMPLETE:
-        //gap_set_ext_adv_enable(1, sizeof(adv_sets_en) / sizeof(adv_sets_en[0]), adv_sets_en);
+        gap_set_ext_adv_enable(1, sizeof(adv_sets_en) / sizeof(adv_sets_en[0]), adv_sets_en);
         handle_send = INVALID_HANDLE;
         att_handle_notify = 0;
-        setup_adv();
         break;
 
     case ATT_EVENT_CAN_SEND_NOW:
@@ -766,7 +599,7 @@ static uint8_t att_db_storage[800];
 
 uint8_t *init_service()
 {
-    const char dev_name[] = "123 KB";
+    const char dev_name[] = "ING Keyboard";
     const uint16_t appearance = 0x03C1;
 
     att_db_util_init(att_db_storage, sizeof(att_db_storage));
@@ -831,8 +664,6 @@ static void sm_packet_handler(uint8_t packet_type, uint16_t channel, const uint8
         break;
     case SM_EVENT_IDENTITY_RESOLVING_SUCCEEDED:
         att_handle_notify = att_handle_report;
-        uint16_t idx = sm_event_identity_resolving_succeeded_get_le_device_db_index(packet);
-        platform_printf("[BLE]SM: identity resolving success. idx:%d\n", idx);
         break;
     case SM_EVENT_PASSKEY_INPUT_NUMBER:
         input_number.flag = 1;
@@ -848,33 +679,24 @@ static void sm_packet_handler(uint8_t packet_type, uint16_t channel, const uint8
                     break;
                 case SM_FINAL_PAIRED:
                     platform_printf("SM: PAIRED\n");
-                    // start_detect_peer_os_type(synced_runner, state_changed->conn_handle);
-                    all_kv_dump();
+                    start_detect_peer_os_type(synced_runner, state_changed->conn_handle);
                     break;
                 case SM_FINAL_REESTABLISHED:
                     platform_printf("SM: REESTABLISHED");
+                    if (kv_get(KV_USER_PEER_OS, NULL) == NULL)
+                        start_detect_peer_os_type(synced_runner,state_changed->conn_handle);
                     if (0 == att_handle_notify)
                     {
                         platform_printf(" BUT LOCAL INFO DELETED");
                     }
                     platform_printf("\n");
-                    // if (kv_get(KV_USER_PEER_OS, NULL) == NULL)
-                    //     start_detect_peer_os_type(synced_runner,state_changed->conn_handle);
-                    all_kv_dump();
                     break;
-                default: //SM_FINAL_FAIL_DISCONNECT
+                default:
                     platform_printf("SM: FINAL ERROR: %d\n", state_changed->reason);
                     break;
             }
         }
-        break;
-    case SM_EVENT_IDENTITY_RESOLVING_STARTED:
-        platform_printf("[BLE]SM: identity resolving started.\n");
-        break;
-    case SM_EVENT_IDENTITY_RESOLVING_FAILED: {
-            hci_con_handle_t handle = sm_event_identity_resolving_failed_get_handle(packet);
-            platform_printf("[BLE]SM identity resolving FAILED! handle = %d  \n",handle);
-        }
+
         break;
     default:
         break;
@@ -892,7 +714,7 @@ uint32_t setup_profile(void *data, void *user_data)
     hci_event_callback_registration.callback = &user_packet_handler;
     hci_add_event_handler(&hci_event_callback_registration);
     att_server_register_packet_handler(&user_packet_handler);
-    sm_config(1, IO_CAPABILITY_NO_INPUT_NO_OUTPUT,
+    sm_config(1, IO_CAPABILITY_KEYBOARD_ONLY,
               0,
               &sm_persistent);
     sm_set_authentication_requirements(SM_AUTHREQ_BONDING);

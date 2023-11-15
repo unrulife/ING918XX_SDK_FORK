@@ -73,7 +73,7 @@ void config_uart(uint32_t freq, uint32_t baud)
 
 void setup_peripherals(void)
 {
-    config_uart(OSC_CLK_FREQ, 460800);
+    config_uart(OSC_CLK_FREQ, 115200);
 
     SYSCTRL_ClearClkGateMulti(  (1 << SYSCTRL_ClkGate_APB_GPIO0)
                               | (1 << SYSCTRL_ClkGate_APB_GPIO1)
@@ -132,25 +132,6 @@ trace_rtt_t trace_ctx = {0};
 
 extern const sm_persistent_t sm_persistent;
 
-
-static int my_kv_visitor_dump(const kvkey_t key, const uint8_t *data, const int16_t len, void *user_data){
-    platform_printf("k = %d:\nv = ", key);
-    printf_hexdump(data, len);
-    platform_printf("\n");
-    return KV_OK;
-}
-
-void all_kv_dump(void){
-    platform_printf("%s\n", __func__);
-    kv_visit(my_kv_visitor_dump, NULL);
-}
-
-void app_storage_remove_all(void){
-    platform_printf("remove all kv.\n");
-    kv_remove_all();
-}
-
-
 int app_main()
 {
     // If there are *three* crystals on board, *uncomment* below line.
@@ -175,15 +156,7 @@ int app_main()
     platform_set_evt_callback(PLATFORM_CB_EVT_PROFILE_INIT, setup_profile, NULL);
     platform_set_irq_callback(PLATFORM_CB_IRQ_UART0, uart_isr, NULL);
 
-
-
     kv_impl_init();
-    all_kv_dump();
-    // app_storage_remove_all();
-    // all_kv_dump();
-
-
-
     trace_rtt_init(&trace_ctx);
     platform_set_evt_callback(PLATFORM_CB_EVT_TRACE, (f_platform_evt_cb)cb_trace_rtt, &trace_ctx);
     platform_config(PLATFORM_CFG_TRACE_MASK, 0x1ff);
